@@ -87,7 +87,12 @@ class LLMProvider(abc.ABC):
         return True, "no verificado"
 
     def supports_prompt_caching(self) -> bool:
-        """Si el proveedor expone metricas de cache de prompt."""
+        """Si el proveedor expone metricas de cache de prompt.
+
+        Es sincrona a proposito: depende solo de que modelo se usa, no de
+        una consulta. Hacerla asincrona obligaria a esperarla sin motivo y
+        fue una inconsistencia real que las pruebas detectaron.
+        """
         return False
 
     async def cerrar(self) -> None:
@@ -139,10 +144,10 @@ class ProveedorOpenAICompatible(LLMProvider):
             )
         return self._cliente
 
-    async def supports_prompt_caching(self) -> bool:
+    def supports_prompt_caching(self) -> bool:
         """Solo algunos proveedores reportan `cached_tokens`.
 
-        No se asume: se comprueba contra la lista de modelos de Groq,
+        No se supone: se comprueba contra la lista de modelos de Groq,
         que es donde el proyecto lo usa. Para el resto se devuelve False y
         el agente registra que la metrica no esta disponible, en vez de
         reportar cero.

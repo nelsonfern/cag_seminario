@@ -553,4 +553,142 @@ tests/test_agent.py                 52 pruebas de agente, citas y metricas
 
 ## Fase 4 - CAG (Cache-Augmented Generation)
 
+**Estado:** completada y verificada. 172 pruebas pasan (30 nuevas).
+
+### 4.1 Que hace CAG en este proyecto
+
+CAG prepara el contexto documental **una sola vez** y lo reutiliza en cada
+consulta. El objetivo no es solo ahorrar trabajo nuestro: es que el
+proveedor pueda **cachear ese prefijo**, de modo que las consultas
+siguientes solo paguen lo nuevo.
+
+Medido en el corpus real (6 documentos):
+
+| | |
+|---|---|
+| Documentos en el contexto | 6 de 6 |
+| Tokens estimados | 3.730 de un presupuesto de 6.000 |
+| Preparacion en frio | 4,4 ms |
+| Entrega desde cache | 0,001 ms |
+| Aceleracion | ~4400x |
+
+### 4.2 El orden del contexto no es un detalle
+
+Un hallazgo que no es evidente y que cambia el diseno: **el orden del
+contexto determina los aciertos de cache del proveedor**. Si el prefijo
+cambia entre consultas, el proveedor no puede reutilizar nada y CAG pierde
+su ventaja por completo.
+
+Por eso los documentos se ordenan de forma **deterministica** (por
+`document_id`) y el presupuesto se aplica siempre igual. Ordenar por fecha,
+por orden de carga o por relevancia casual haria que el prefijo
+fuera distinto en cada consulta.
+
+Hay una prueba dedicada a esto (`test_contexto_estable_entre_preparaciones`).
+
+### 4.3 Hallazgo importante: la cache del proveedor no es fiable
+
+Al medir el acierto de cache con prefijo **byte a byte identico** (verificado
+con SHA-256 del prefijo), el resultado fue:
+
+| Llamada | Tokens entrada | Tokens cacheados | Tasa |
+|---------|---------------|------------------|------|
+| 1 | 3617 | (no reportada) | - |
+| 2 | 3617 | 512 | 14,2% |
+| 3 | 3617 | (no reportada) | - |
+| 4 | 4385 | 3584 | **81,7%** |
+| 5 | 3617 | (no reportada) | - |
+| 6 | 3617 | (no reportada) | - |
+
+El prefijo era el mismo en las seis llamadas (`3f04aaecf7154e3e`), luego que
+**la variacion es del proveedor, no de como armamos el contexto**. En otro
+momento del mismo dia se obtuvo 98,8%.
+
+Lectura probable: Groq reparte las peticiones entre varios backends y el
+acierto depende de caer en el que tiene el prefijo cacheado. La propia
+documentacion lo advierte: "cache hits are not guaranteed".
+
+**Consecuencia para el experimento, y es la importante:** el runner tiene que
+**registrar la tasa de acierto que realmente se obtiene** y reportarla. No
+se puede asumir un 90% ni un 100%. Un acierto del 14% promotionado en una
+consulta y del 82% en otra sigue siendo un resultado valido y defendible;
+informar un 99% inventado no lo seria.
+
+El script `scripts/diagnostico_cache.py` existe para repetir esta
+medicion.
+
+### 4.4 Las dos caches se registran por separado
+
+El enunciado pide no confundir:
+
+| | Que es | Quien la controla | Como se mide |
+|---|---|---|---|
+| **Cache de aplicacion** | El archivo en disco con el contexto preparado | Nosotros | `preparacion_ms` / `entrega_ms` |
+| **Cache de computo del proveedor** | La que reporta el servicio | Groq | `usage.prompt_tokens_details.cached_tokens` |
+
+Cuando el proveedor no la reporta, se deja en `None` y `cache_disponible`
+queda en `False`. **Nunca se informa cero**, porque cero es un dato y "no lo
+informaron" no lo es.
+
+La lista de modelos que se sabe que reportan cacheado esta acotada a los dos
+`gpt-oss` de Groq. Ampliarla sin verificar seria reportar una metrica
+inexistente, que es justo lo que el enunciado prohibe.
+
+### 4.5 Problemas encontrados
+
+| # | Problema | Causa | Resolucion |
+|---|----------|-------|------------|
+| 20 | **El hash del corpus reventaba** | `VERSION_CONTEXTO` era un entero en una lista que se.unia con `str.join`. | Se convierte a cadena al construir la huella. |
+| 21 | **La cache era contaminable** | `preparar()` devolvia el **mismo objeto** guardado. Marcar `desde_cache` o poner `preparacion_ms` en cero alteraba el contexto cacheado, y la lectura siguiente devolvia datos ya modificados. | Se devuelve una copia con `dataclasses.replace` y la version intacta queda guardada. La prueba `test_la_cache_no_se_altera_al_entregar` lo verifica mutando el contexto recibido. |
+| 22 | **Metrica de preparacion engañosa** | Servir desde cache reportaba el tiempo de la preparacion original (4 ms), no el de la entrega. Comparar una ejecucion fria con una caliente usando ese numero daria una mejora inexistente. | `preparacion_ms` queda en 0 cuando se sirve desde cache, y se agrega `entrega_ms` para medir el coste real de servir. |
+| 23 | **`supports_prompt_caching` inconsistente** | Era metodo **sincrono** en la clase base y **asincrono** en el proveedor real. Habia que esperarlo sin motivo. | Se unifica como sincrono: depende del modelo, no de una consulta. |
+| 24 | **Acierto de cache atribuido a la app** | Una prueba media aislada daba 14,2% y la primera medicion daba 98,8%. Sin investigar, la conclusion habria sido que el contexto estaba mal armado. | Se escribio `diagnostico_cache.py` para probar con SHA del prefijo. Resultado: la variacion es del proveedor. |
+
+### 4.6 Decisiones de diseno
+
+1. **El truncado es por documento entero.** Cortar un documento por la
+   mitad produce citas sin sentido y afirmaciones a medio camino, que el
+   modelo completa por su cuenta. Si no entra, entra lo que cabe en orden
+   estable y se dice cuantas fuentes quedaron afuera.
+2. **El presupuesto no se reparte por consulta.** Si el contexto variara
+   segun la pregunta, el proveedor no podria reaprovechar el prefijo y CAG
+   perderia su ventaja por completo.
+3. **La cache guarda tambien los documentos, no solo el texto.** El agente
+   los necesita para verificar la respuesta. Reconstruirlos por separado
+   podria dar una version distinta de la que se envio al modelo, y la
+   verificacion seria sobre otro corpus.
+4. **Una cache ilegible se descarta, no rompe.** Perder un archivo de cache
+   es barato; no poder arrancar, no.
+5. **Reordenar los archivos no invalida la cache.** La huella depende del
+   contenido, no del orden de lectura en disco.
+
+### 4.7 Archivos creados
+
+```
+app/services/cag.py              Servicio CAG: preparacion, cache, particion
+scripts/probar_cag.py            Prueba de CAG por consola
+scripts/diagnostico_cache.py     Mide si el prefijo es identico entre llamadas
+tests/test_cag.py                30 pruebas de CAG
+```
+
+### 4.8 Como probarlo desde la consola
+
+```powershell
+# Sin llamar al modelo: rapido, muestra preparacion, cache y particionado
+python scripts\probar_cag.py
+
+# Con el modelo real: mide el acierto de cache del proveedor
+python scripts\probar_cag.py --consultas
+```
+
+### 4.9 Que falta
+
+- [ ] Integrar CAG en el agente, para que `/chat?strategy=cag` lo use.
+- [ ] Runner que mida la tasa real de acierto a lo largo de las 50
+      preguntas (Fase 8).
+
+---
+
+## Fase 5 - RAG (Retrieval-Augmented Generation)
+
 **Estado:** no iniciada.
