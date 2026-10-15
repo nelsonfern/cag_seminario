@@ -917,6 +917,138 @@ python scripts\probar_rag.py --consultas -p "Cuanto cuesta la copia certificada?
 
 ---
 
-## Fase 6 - API FastAPI y pruebas de endpoints
+## Fase 6 - API FastAPI
+
+**Estado:** completada y verificada. Commit `fc7adbe`. 240 pruebas pasan.
+
+### 6.1 Endpoints
+
+| Endpoint | Que hace |
+|----------|----------|
+| `GET /health` | Estado, modelo, estrategias disponibles, tamaño del corpus |
+| `GET /sources` | Fuentes del corpus con vigencia, hash y estado de verificación |
+| `POST /chat` | Consulta con `cag` o `rag` |
+| `POST /evaluation/run` | Lanza el experimento (202, no 200) |
+| `GET /evaluation/results` | Lista de ejecuciones |
+| `GET /evaluation/results/{run_id}` | Detalle de una ejecución |
+| `GET /metrics/summary` | Agregado por estrategia |
+
+### 6.2 Decisiones
+
+1. **Un fallo del proveedor devuelve 502, no 200 con un texto de error.** Un
+   cliente no debe confundir un error de red con una abstención. Por eso
+   `_respuesta_de_error` marca `error_proveedor` y la ruta lo traduce a 502.
+
+2. **`/evaluation/run` devuelve 202.** El experimento tarda minutos por los
+   límites del proveedor. Responder "hecho" sería mentir.
+
+3. **Las claves de `/health` están siempre presentes**, con `None` cuando no
+   se conocen. Un cliente tiene que poder confiar en la forma de la
+   respuesta; antes `model` desaparecía y rompía a cualquiera que lo leyera.
+
+4. **`/sources` incluye las fuentes bloqueadas.** Saber que se intentó
+   acceder a `argentina.gob.ar/tramitar` y que su `robots.txt` lo prohíbe
+   es parte de la trazabilidad. Por eso `/sources` devuelve 7 entradas con
+   6 documentos.
+
+5. **El cuerpo del corpus nunca sale por HTTP.** `/sources` expone
+   metadatos, nunca el contenido. Hay una prueba que lo comprueba.
+
+6. **Cada consulta se registra en SQLite** con su estrategia, latencia,
+   tokens y si el proveedor reportó caché. `guardar=false` lo desactiva.
+
+### 6.3 Problemas encontrados
+
+| # | Problema | Causa | Resolucion |
+|---|----------|-------|------------|
+| 35 | **`include_router` parecía no registrar nada** | FastAPI 0.143 incluye el router de forma **perezosa**: las rutas quedan dentro de un `_IncludedRouter` y no aparecen en `app.routes` una por una. Un conteo sobre esa lista daba un falso negativo y hacia pensar que faltaban seis endpoints. | Se verifico **pidiendo** a los endpoints en vez de introspeccionar. El test `test_cada_app_expone_health` quedo escrito asi a proposito, con el motivo anotado. |
+| 36 | **`FuenteRespuesta` exigia un campo que `Cita` no tiene** | `fecha_actualizacion` no existe en el modelo de cita, asi que toda respuesta fallaba al serializar. | Se elimino del contrato. Ademas se bio que `Cita` no lleva vigencia, asi que el frontend la muestra cuando esta. |
+| 37 | **La forma de `/health` cambiaba segun el estado** | `model` solo aparecia cuando el proveedor estaba configurado. | Ahora siempre esta, con `None`. |
+| 38 | **Falta `contar_ejecuciones`** | `/evaluation/results` la llamaba y el repositorio no la tenia. | Agregada. |
+
+### 6.4 Dataset de evaluación
+
+`app/evaluation/dataset.py` con **23 preguntas verificadas a mano** contra
+las páginas oficiales, no generadas por el modelo. Una referencia
+inventada mediría al modelo contra su propia imaginación.
+
+| Categoría | Cantidad |
+|-----------|----------|
+| Requisitos | 10 |
+| Procedimiento | 10 |
+| Multi-sección | 3 |
+| Ambigua | 0 |
+| Fuera del corpus | 0 |
+
+**Faltan las tres categorías más importantes.** Se dejaron vacías a
+propósito: no se rellenaron con preguntas inventadas ni con placeholders.
+Sin ellas no se puede medir abstención, que es la métrica que distingue un
+sistema honesto de uno que confabula. Queda como trabajo de la Fase 8.
+
+---
+
+## Fase 7 - Interfaz web
+
+**Estado:** completada y verificada. 258 pruebas pasan.
+
+### 7.1 Qué tiene
+
+- **Chat** con historial y distinción visual entre respuesta con fuentes y
+  abstención (borde punteado).
+- **Selector CAG/RAG**, que es la pieza central: permite comparar las dos
+  estrategias sobre la misma pregunta.
+- **Panel de métricas** con latencia, tokens, acierto de caché y los datos
+  propios de cada estrategia.
+- **Fuentes enlazadas** al sitio oficial, con aviso cuando la vigencia no
+   está confirmada.
+- **Avisos del agente** destacados: si el agente menciona un dato que no
+  aparece en las fuentes, se dice.
+- **Estado del servicio** (proveedor, modelo, cantidad de documentos).
+- Responsive y con soporte de modo oscuro.
+
+Sin dependencias externas: HTML, CSS y JavaScript nativo. Se sirve desde
+la propia API, así que en la exposición basta con `uvicorn app.main:app`.
+
+### 7.2 Seguridad de la superficie estática
+
+El frontend se sirve con una **lista blanca explícita** de tres archivos.
+Una prueba verifica que `/.env`, `/data/processed/corpus.json`,
+`/requirements.txt` y `/app/main.py` devuelven 404. Un backend estático
+mal configurado puede terminar exponiendo la clave de API.
+
+### 7.3 Problemas encontrados
+
+| # | Problema | Causa | Resolucion |
+|---|----------|-------|------------|
+| 39 | **Placeholder "MENSAJE PRUEBA UNIT" en el dataset** | Al escribir las 50 preguntas se completeon con textos de relleno para llegar al numero pedido. | Eliminados. El dataset tiene las 23 preguntas reales y las categorias faltantes quedaron **vacias y documentadas**, no rellenadas con basura. |
+
+---
+
+## Estado del proyecto
+
+| Fase | Estado |
+|------|--------|
+| 1 - Arquitectura | Completada |
+| 2 - Ingesta | Completada |
+| 3 - Proveedor LLM y agente | Completada |
+| 4 - CAG | Completada |
+| 5 - RAG | Completada |
+| 6 - API | Completada |
+| 7 - Interfaz web | Completada |
+| 8 - Experimento | **Pendiente** |
+| 9 - Documentación final | **Pendiente** |
+
+**258 pruebas pasan**, lint limpio.
+
+### Lo que falta para cerrar
+
+1. **Completar el dataset** con las categorías de ambigua y fuera de corpus.
+   Sin ellas no hay métrica de abstención, que es la más importante.
+2. **Ejecutar el experimento** de 50 preguntas × 2 estrategias.
+3. **Guía de exposición** y lectura de los resultados.
+
+---
+
+## Fase 8 - Dataset completo y experimento
 
 **Estado:** no iniciada.

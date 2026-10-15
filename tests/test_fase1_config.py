@@ -329,6 +329,15 @@ class TestConstruccionApp:
         assert primera is not segunda
 
     def test_cada_app_expone_health(self) -> None:
-        rutas = {r.path for r in create_app().routes}
+        """Los endpoints se registran vía router, no como rutas sueltas.
 
-        assert "/health" in rutas
+        FastAPI 0.143 incluye un router de forma perezosa: las rutas del
+        router viven dentro de un `_IncludedRouter` y no aparecen en
+        `app.routes` una por una. Comprobarlas sobre esa lista daria un
+        falso negativo, asi que se verifican pidiendo.
+        """
+        from fastapi.testclient import TestClient
+
+        with TestClient(create_app()) as c:
+            assert c.get("/health").status_code == 200
+            assert c.get("/sources").status_code == 200

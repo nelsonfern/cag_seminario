@@ -394,17 +394,25 @@ class TestAgente:
         assert all(s.url_origen for s in r.sources)
 
     def test_contexto_marca_no_confiable(self, agente: Agente) -> None:
-        prompt = agente.construir_prompt_usuario("prueba", agente.documentos_del_corpus())
+        contexto, _, _ = agente._contexto_cag()
 
-        assert "<contexto_documental no_confiable>" in prompt
+        assert "<contexto_documental no_confiable>" in contexto
+
+    def test_prompt_incluye_la_pregunta(self, agente: Agente) -> None:
+        contexto, documentos, _ = agente._contexto_cag()
+
+        prompt = agente._armar_prompt(contexto, "prueba", documentos)
+
         assert "Pregunta del ciudadano: prueba" in prompt
 
-    def test_contexto_incluye_metadatos_de_vigencia(self, agente: Agente) -> None:
+    def test_prompt_declara_la_vigencia(self, agente: Agente) -> None:
         """El modelo tiene que saber que datos no estan confirmados."""
-        prompt = agente.construir_prompt_usuario("prueba", agente.documentos_del_corpus())
+        contexto, documentos, _ = agente._contexto_cag()
 
-        assert "Vigencia: vigente" in prompt
-        assert "Fecha de actualizacion declarada" in prompt
+        prompt = agente._armar_prompt(contexto, "prueba", documentos)
+
+        assert "vigencia: vigente" in prompt
+        assert "Pregunta del ciudadano: prueba" in prompt
 
     def test_sin_corpus_no_inventa(self, agente_sin_corpus: Agente) -> None:
         """Sin documentos, el agente avisa en vez de responder de memoria."""

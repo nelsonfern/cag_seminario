@@ -273,6 +273,10 @@ class EvaluationRepository:
         ejecucion["total_resultados"] = len(ejecucion["resultados"])
         return ejecucion
 
+    def contar_ejecuciones(self) -> int:
+        with self._conexion() as conexion:
+            return conexion.execute("SELECT COUNT(*) AS n FROM ejecuciones").fetchone()["n"]
+
     def listar_ejecuciones(self, limite: int = 20) -> list[dict[str, Any]]:
         with self._conexion() as conexion:
             filas = conexion.execute(

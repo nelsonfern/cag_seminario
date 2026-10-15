@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TramitaIA - Consultas sobre tramites de La Rioja</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="cabecera">
+    <div class="contenedor cabecera-interior">
+      <div>
+        <h1>TramitaIA</h1>
+        <p class="subtitulo">Consultas sobre tramites publicos de La Rioja, con fuentes oficiales</p>
+      </div>
+      <div class="estado" id="estado" role="status" aria-live="polite">
+        <span class="punto"></span>
+        <span class="texto">Comprobando...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="contenedor">
+    <!--
+      El selector de estrategia es la pieza central del proyecto: permite
+      comparar CAG y RAG sobre la misma pregunta y el mismo corpus.
+    -->
+    <section class="selector" aria-label="Estrategia de generación aumentada">
+      <div class="grupo">
+        <span class="etiqueta">Estrategia</span>
+        <div class="opciones" role="radiogroup">
+          <label class="opcion activa">
+            <input type="radio" name="estrategia" value="cag" checked>
+            <span class="nombre">CAG</span>
+            <span class="detalle">Contexto completo reutilizado</span>
+          </label>
+          <label class="opcion">
+            <input type="radio" name="estrategia" value="rag">
+            <span class="nombre">RAG</span>
+            <span class="detalle">Solo fragmentos relevantes</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <span class="etiqueta">Pregunta de ejemplo</span>
+        <select id="ejemplos" aria-label="Ejemplos">
+          <option value="">Elegir una...</option>
+          <option>Cuanto cuesta la copia de acta certificada?</option>
+          <option>Que documentacion necesito para una partida de nacimiento?</option>
+          <option>Cuanto tarda el Registro Civil en entregar una partida?</option>
+          <option>Como hago para obtener el pasaporte argentino?</option>
+          <option>El precio de la partida es de $50.000, verdad?</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Historial de la conversacion -->
+    <section class="conversacion" id="conversacion" aria-live="polite" aria-label="Conversación">
+      <div class="vacio" id="vacio">
+        <p>Escribi una consulta sobre un tramite.</p>
+        <p class="aclaracion">
+          El agente responde solo con informacion de fuentes oficiales.
+          Si no encuentra evidencia, lo dice en lugar de inventar.
+        </p>
+      </div>
+    </section>
+
+    <!-- Formulario -->
+    <form class="redactor" id="formulario">
+      <label class="oculto" for="pregunta">Tu consulta</label>
+      <textarea
+        id="pregunta"
+        name="pregunta"
+        placeholder="Escribi tu consulta..."
+        rows="2"
+        maxlength="1000"
+        required></textarea>
+      <button type="submit" id="enviar">
+        <span class="texto">Consultar</span>
+        <span class="cargando" hidden>Consultando...</span>
+      </button>
+    </form>
+
+    <!--
+      Panel de metricas. Muestra lo que el enunciado pide exponer:
+      latencia, tokens y si el proveedor cacheo el contexto.
+    -->
+    <details class="metricas">
+      <summary>Ver metricas de la ultima consulta</summary>
+      <div class="metricas-cuerpo" id="metricas-cuerpo">
+        <p class="sin-datos">Todavia no hay consultas.</p>
+      </div>
+    </details>
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor">
+      <p>
+        Proyecto academico. La informacion proviene de sitios oficiales del
+        Gobierno de La Rioja. Ante cualquier duda, consulta la fuente original.
+      </p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

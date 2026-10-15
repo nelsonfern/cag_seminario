@@ -1,0 +1,332 @@
+/* TramitaIA - interfaz de consulta.
+   Diseño sobrio y legible: la respuesta del agente es lo importante,
+   todo lo demas acompaña. Sin dependencias externas. */
+
+:root {
+  --fondo: #f5f6f8;
+  --panel: #ffffff;
+  --texto: #1c1e21;
+  --tenue: #6b7280;
+  --borde: #dcdfe4;
+  --primario: #8a1538;
+  --primario-suave: #fdf2f5;
+  --aviso: #92400e;
+  --aviso-fondo: #fffbeb;
+  --error: #991b1b;
+  --error-fondo: #fef2f2;
+  --exito: #166534;
+  --radio: 8px;
+  --sombra: 0 1px 3px rgba(0, 0, 0, .08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #14161a;
+    --panel: #1e2126;
+    --texto: #e8eaed;
+    --tenue: #9aa0a6;
+    --borde: #333840;
+    --primario: #e08aa3;
+    --primario-suave: #2a1f24;
+    --aviso: #fcd34d;
+    --aviso-fondo: #2d2718;
+    --error: #fca5a5;
+    --error-fondo: #2d1d1d;
+    --exito: #86efac;
+    --sombra: 0 1px 3px rgba(0, 0, 0, .4);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  line-height: 1.6;
+}
+
+.contenedor {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.oculto {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- Cabecera --- */
+.cabecera {
+  background: var(--panel);
+  border-bottom: 1px solid var(--borde);
+  padding: 1.25rem 0;
+}
+
+.cabecera-interior {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cabecera h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--primario);
+}
+
+.subtitulo {
+  margin: .15rem 0 0;
+  color: var(--tenue);
+  font-size: .9rem;
+}
+
+.estado {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .85rem;
+  color: var(--tenue);
+}
+
+.estado .punto {
+  width: .6rem; height: .6rem;
+  border-radius: 50%;
+  background: var(--tenue);
+}
+
+.estado.ok .punto { background: var(--exito); }
+.estado.error .punto { background: var(--error); }
+
+/* --- Selector de estrategia --- */
+.selector {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding: 1.25rem 0 .5rem;
+}
+
+.grupo { display: flex; flex-direction: column; gap: .4rem; }
+
+.etiqueta {
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--tenue);
+}
+
+.opciones { display: flex; gap: .5rem; }
+
+.opcion {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: .5rem .9rem;
+  cursor: pointer;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  transition: border-color .15s, background .15s;
+}
+
+.opcion input { position: absolute; opacity: 0; pointer-events: none; }
+
+.opcion .nombre { font-weight: 600; font-size: .95rem; }
+.opcion .detalle { font-size: .78rem; color: var(--tenue); }
+
+.opcion.activa {
+  border-color: var(--primario);
+  background: var(--primario-suave);
+}
+
+.opcion:focus-within { outline: 2px solid var(--primario); outline-offset: 2px; }
+
+select, textarea {
+  font: inherit;
+  color: var(--texto);
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: .5rem .7rem;
+}
+
+select { min-width: 320px; }
+
+/* --- Conversacion --- */
+.conversacion {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0;
+  min-height: 200px;
+}
+
+.vacio {
+  color: var(--tenue);
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.vacio .aclaracion { font-size: .85rem; max-width: 30rem; margin: .5rem auto 0; }
+
+.mensaje { display: flex; flex-direction: column; gap: .4rem; }
+
+.mensaje.usuario { align-items: flex-end; }
+
+.burbuja {
+  max-width: 85%;
+  padding: .75rem 1rem;
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mensaje.usuario .burbuja { background: var(--primario); color: #fff; }
+.mensaje.agente .burbuja { background: var(--panel); border: 1px solid var(--borde); }
+
+/* La respuesta sin respaldo se distingue a simple vista. */
+.mensaje.agente.abstencion .burbuja {
+  border-style: dashed;
+  border-color: var(--aviso);
+  background: var(--aviso-fondo);
+}
+
+.mensaje.error .burbuja {
+  border-color: var(--error);
+  background: var(--error-fondo);
+}
+
+.etiqueta-estrategia {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--tenue);
+}
+
+/* --- Fuentes --- */
+.fuentes { margin-top: .6rem; }
+
+.fuentes summary {
+  cursor: pointer;
+  font-size: .82rem;
+  color: var(--tenue);
+  user-select: none;
+}
+
+.fuentes ul { margin: .5rem 0 0; padding-left: 1.1rem; font-size: .85rem; }
+.fuentes li { margin-bottom: .35rem; }
+.fuentes a { color: var(--primario); }
+.fuentes .titulo { display: block; }
+.fuentes .vigencia { font-size: .78rem; color: var(--tenue); }
+.fuentes .vigencia.incierta { color: var(--aviso); }
+
+/* --- Avisos --- */
+.avisos {
+  margin-top: .6rem;
+  padding: .6rem .8rem;
+  border-left: 3px solid var(--aviso);
+  background: var(--aviso-fondo);
+  border-radius: 0 var(--radio) var(--radio) 0;
+  font-size: .85rem;
+}
+
+.avisos p { margin: 0 0 .4rem; }
+.avisos p:last-child { margin-bottom: 0; }
+
+/* --- Redactor --- */
+.redactor {
+  display: flex;
+  gap: .6rem;
+  align-items: flex-end;
+  padding: 1rem 0;
+  border-top: 1px solid var(--borde);
+}
+
+.redactor textarea { flex: 1; resize: vertical; }
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: .65rem 1.4rem;
+  border: none;
+  border-radius: var(--radio);
+  background: var(--primario);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled { opacity: .55; cursor: not-allowed; }
+
+@media (prefers-color-scheme: dark) {
+  button { color: #1c1e21; }
+}
+
+button:focus-visible { outline: 2px solid var(--texto); outline-offset: 2px; }
+
+/* --- Metricas --- */
+.metricas {
+  margin: 1rem 0 2rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--panel);
+}
+
+.metricas summary {
+  cursor: pointer;
+  padding: .7rem 1rem;
+  font-size: .88rem;
+  color: var(--tenue);
+}
+
+.metricas-cuerpo {
+  padding: 0 1rem 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: .75rem;
+}
+
+.metrica {
+  background: var(--fondo);
+  border-radius: var(--radio);
+  padding: .6rem .75rem;
+}
+
+.metrica .clave {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--tenue);
+  display: block;
+}
+
+.metrica .valor { font-size: 1.15rem; font-weight: 600; }
+.metrica .nota { font-size: .75rem; color: var(--tenue); }
+
+.sin-datos { grid-column: 1 / -1; color: var(--tenue); font-size: .85rem; margin: 0; }
+
+/* --- Pie --- */
+.pie {
+  border-top: 1px solid var(--borde);
+  padding: 1.5rem 0;
+  color: var(--tenue);
+  font-size: .82rem;
+}
+
+.pie p { margin: 0; }
+
+/* --- Movil --- */
+@media (max-width: 640px) {
+  .selector { gap: 1rem; }
+  .opciones { flex-direction: column; width: 100%; }
+  select { min-width: 0; width: 100%; }
+  .burbuja { max-width: 100%; }
+  .redactor { flex-direction: column; align-items: stretch; }
+  .cabecera-interior { flex-direction: column; align-items: flex-start; }
+}
