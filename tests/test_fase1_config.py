@@ -40,6 +40,28 @@ class TestHealth:
 
         assert body["llm_provider"] == "fake"
         assert body["model"] == "fake-deterministic"
+        assert body["llm_configurado"] is True
+
+    def test_health_reporta_degradado_sin_proveedor(self, monkeypatch) -> None:
+        """Sin credenciales la app no se rompe: lo reporta en /health."""
+        from app.core.config import Settings, get_settings
+
+        monkeypatch.delenv("LLM_PROVIDER", raising=False)
+        monkeypatch.setenv("LLM_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("OPENAI_API_KEY", "")
+        monkeypatch.setenv("OPENAI_MODEL", "")
+        get_settings.cache_clear()
+
+        from app.main import create_app
+
+        with TestClient(create_app()) as c:
+            body = c.get("/health").json()
+
+        assert body["status"] == "degradado"
+        assert body["llm_configurado"] is False
+        # Sin modelo no se inventa un nombre.
+        assert body["model"] is None
+        assert Settings(_env_file=None).llm_configurado is False
 
     def test_openapi_se_genera(self, cliente: TestClient) -> None:
         """La documentacion interactiva es parte del contrato de la API."""
@@ -106,13 +128,39 @@ class TestConfiguracion:
                 cag_max_context_tokens=20000,
             )
 
-    def test_openai_exige_base_url_y_modelo(self) -> None:
-        with pytest.raises(ValueError, match="OPENAI_BASE_URL"):
-            Settings(_env_file=None, llm_provider="openai_compatible")
+    def test_openai_incompleto_no_rompe_la_importacion(self) -> None:
+        """Sin clave ni modelo, la app debe arrancar igual y reportar degradada.
 
-    def test_openai_exige_modelo(self) -> None:
-        with pytest.raises(ValueError, match="OPENAI_MODEL"):
-            Settings(_env_file=None, llm_provider="openai_compatible", openai_base_url="http://x")
+        Si la configuracion incompleta hiciera fallar el import, no se podria
+        ni leer /health ni correr los tests sin un `.env` valido.
+        """
+        s = Settings(_env_file=None, llm_provider="openai_compatible")
+
+        assert s.llm_configurado is False
+
+    def test_openai_configurado_requiere_clave_y_modelo(self) -> None:
+        completo = Settings(
+            _env_file=None,
+            llm_provider="openai_compatible",
+            openai_base_url="http://x",
+            openai_api_key="clave-de-prueba",
+            openai_model="m",
+        )
+        sin_clave = Settings(
+            _env_file=None,
+            llm_provider="openai_compatible",
+            openai_base_url="http://x",
+            openai_model="m",
+        )
+
+        assert completo.llm_configurado is True
+        assert sin_clave.llm_configurado is False
+
+    def test_solo_con_modelo_sigue_sin_configurar(self) -> None:
+        """Un modelo sin clave es tan inutil como una clave sin modelo."""
+        s = Settings(_env_file=None, llm_provider="openai_compatible", openai_model="m")
+
+        assert s.llm_configurado is False
 
     def test_ventana_de_contexto_se_declara_por_proveedor(self) -> None:
         """Cada proveedor tiene su propia ventana; no hay un default generico."""

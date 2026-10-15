@@ -50,8 +50,14 @@ class Settings(BaseSettings):
     ollama_context_length: int = 32768
 
     # --- Endpoint estilo OpenAI ---
-    openai_base_url: str = ""
+    # OpenRouter es el proveedor recomendado: una sola clave, muchos modelos
+    # y exposicion de las metricas de prompt caching que pide el enunciado.
+    # Se deja un valor por defecto para que importar el paquete no dependa
+    # de que el `.env` exista. Sin modelo, la API responde con un 401 claro.
+    openai_base_url: str = "https://api.groq.com/openai/v1"
     openai_api_key: str = ""
+    # Sin default a proposito: el modelo debe elegirse de forma explicita.
+    # Fijarlo por codigo impide reproducir una ejecucion concreta.
     openai_model: str = ""
     # Ventana de contexto declarada del modelo remoto.
     # Se declara a mano porque cada modelo tiene la suya, y el presupuesto de
@@ -153,25 +159,34 @@ class Settings(BaseSettings):
 
         # El presupuesto de contexto de CAG debe dejar lugar para el prompt
         # del sistema y para la respuesta generada.
-        if self.cag_max_context_tokens >= self.model_context_window:
+        # Solo se valida si hay un proveedor usable: sin configuracion no
+        # existe una ventana real con la cual comparar.
+        if self.llm_configurado and self.cag_max_context_tokens >= self.model_context_window:
             raise ValueError(
                 f"CAG_MAX_CONTEXT_TOKENS ({self.cag_max_context_tokens}) no puede superar "
                 f"la ventana de contexto del modelo ({self.model_context_window}). "
                 "Dejese margen para el prompt y la respuesta."
             )
 
-        # El proveedor elegido debe tener lo minimo configurado.
-        if self.llm_provider == "openai_compatible":
-            if not self.openai_base_url:
-                raise ValueError("LLM_PROVIDER=openai_compatible requiere OPENAI_BASE_URL.")
-            if not self.openai_model:
-                raise ValueError("LLM_PROVIDER=openai_compatible requiere OPENAI_MODEL.")
-
         return self
 
     # -------------------------------------------------------------------------
     # Propiedades derivadas
     # -------------------------------------------------------------------------
+    @property
+    def llm_configurado(self) -> bool:
+        """Indica si el proveedor elegido tiene lo minimo para funcionar.
+
+        Importar el paquete no debe fallar por falta de configuracion:
+        la app tiene que poder arrancar y reportar el problema en `/health`,
+        no romperse al importar.
+        """
+        if self.llm_provider == "openai_compatible":
+            return bool(self.openai_base_url and self.openai_api_key and self.openai_model)
+        if self.llm_provider == "ollama":
+            return bool(self.ollama_base_url and self.ollama_model)
+        return True
+
     @property
     def model_context_window(self) -> int:
         """Ventana de contexto efectiva del modelo configurado."""

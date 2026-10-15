@@ -23,6 +23,8 @@ Toda afirmacion de funcionamiento debe tener una prueba o una medicion detras.
 | 5 | **Aviso de obsolescencia de Starlette** | `starlette 1.8.0` marca `httpx` como obsoleto en el cliente de pruebas y sugiere `httpx2`. | Anotado. No bloquea: los tests funcionan. Se evalua migrar si FastAPI lo exige. |
 | 6 | **Sin GPU utilizable** | Ryzen 5 5500U con Radeon integrada. Ollama registra `dropping integrated GPU`. | Medido y descartado: el prefill va a ~220 tok/s incluso por CPU, que es lo que CAG necesita. |
 | 7 | **WDAC bloquea binarios sin reputacion** | Politica de Control de Aplicaciones que exige firma "Enterprise" (Policy ID `0283ac0f-fff1-49ae-ada1-8a933130cad6`). `scipy>=1.15` publica un `_sobol.pyd` sin reputacion y no carga. Como `scipy` arrastra `scikit-learn`, y este a `sentence-transformers`, **tumbaba el pipeline completo de embeddings**. | Fijado `scipy==1.14.1` y `numpy>=2.2,<2.3` en `requirements.txt`, con el motivo documentado. Verificado que `import scipy.stats` y los embeddings funcionan. |
+| 8 | **Importar el paquete reventaba sin `.env`** | `config.py` evaluaba `settings = get_settings()` a nivel de modulo. Como el proveedor por defecto paso a ser una API, cualquier `import app.core.config` fallaba con `ValidationError` si no habia credenciales. Rompia los scripts, y dejaba la app sin poder ni reportar su estado. | Se elimino la validacion fatal: `openai_base_url` tiene valor por defecto y `llm_configurado` es una propiedad consultable. `/health` responde `status: "degradado"` en vez de romper. Verificado que `import app.core.config` y `import app.main` funcionan sin `.env`. |
+| 9 | **La app no se podia reconfigurar ni probar** | `app/main.py` hacia `from app.core.config import settings`, que queda ligado al objeto creado en el import. Cambiar el entorno despues no cambiaba lo que la app leia, asi que era imposible probar `/health` con dos proveedores distintos. | La app resuelve la configuracion por peticion via `get_settings()` (cacheado, coste nulo). Cubierto por `test_health_reporta_degradado_sin_proveedor`. |
 
 ### 1.2 Benchmark del proveedor de LLM (ejecutado)
 
@@ -102,6 +104,42 @@ se conserva como medicion de referencia del hardware.
 Nota: el mismo modelo debe usarse en CAG y en RAG. Si cambian, la
 comparacion deja de ser valida.
 
+#### 1.2.4 Proveedor gratuito elegido: Groq
+
+Investigados los free tiers disponibles (octubre 2026). Los tres que
+sirven:
+
+| Proveedor | Modelo | Limite principal | Problema |
+|-----------|--------|------------------|----------|
+| **Groq** | `openai/gpt-oss-120b` | 1000 req/dia, 200k tok/dia | Ninguno relevante |
+| OpenRouter | `google/gemma-4-31b-it:free` | 50 req/dia sin credito | Obliga a correr el experimento en 2 dias; ademas advierte que entrena con los prompts |
+| Google AI Studio | `gemini-2.5-flash` | Generoso | API propia, no es OpenAI-compatible |
+
+**Groq gana por tres razones concretas:**
+
+1. Reporta `usage.prompt_tokens_details.cached_tokens`, que es exactamente
+   la metrica de cache que el enunciado exige registrar. Con un servidor
+   local no habia forma de obtenerla.
+2. "Cached tokens do not count towards your rate limits". El contexto de
+   CAG es identico en las 50 consultas, asi que se cobra una sola vez.
+3. 1000 req/dia: el experimento completo son ~100 llamadas.
+
+Proyeccion de consumo para 50 preguntas x 2 estrategias:
+
+| | Tokens facturables |
+|---|---|
+| CAG (contexto fijo de ~6k, cacheado tras la primera) | ~28.500 |
+| RAG (los fragmentos cambian por consulta, sin cacheo efectivo) | ~92.500 |
+| **Total** | **~121.000 de 200.000 disponibles** |
+
+El experimento entra en un solo dia del plan gratuito.
+
+Nota de diseno importante: Groq solo reporta `cached_tokens` para
+`gpt-oss-20b` y `gpt-oss-120b`. La cache expira a las 2 horas, asi que
+**ambas estrategias deben correrse en la misma sesion**; si se separan, la
+segunda arranca con la cache vacia y la medicion pierde sentido. Esto
+justifica medir por separado ejecuciones frias y calientes.
+
 ### 1.3 Archivos creados
 
 ```
@@ -117,7 +155,16 @@ app/core/config.py        Settings con validacion de coherencia
 app/core/logging.py       Logging con filtro de redaccion de credenciales
 app/models/schemas.py     Vocabulario documental y contratos compartidos
 scripts/benchmark_llm.py  Benchmark del proveedor LLM, reproducible
+scripts/proveedor_probe.py  Prueba de calidad: abstension e inyeccion
 ```
+
+Los dos scripts de `scripts/` son herramientas de decision, no del
+producto. El probe de calidad permite descartar un modelo ANTES de
+escribir el agente: los cinco casos (abstencion, resistencia a inyeccion,
+fundamentacion, no inventar plazos, consulta fuera de alcance) se imprimen
+para revision humana. El script **no asigna puntaje automatico**: un
+puntaje heuristico sobre cinco casos daria una precision que el numero no
+sostiene.
 
 ### 1.4 Decisiones de diseno que conviene no revertir
 
