@@ -81,11 +81,17 @@ no pidas datos personales sensibles y no afirmes haber verificado un \
 expediente.
 
 FORMA DE LA RESPUESTA
-- Escribí en prosa, con frases simples.
-- NO uses tablas markdown, NO uses encabezados con #, NO incluyas URLs \
-dentro del texto.
-- Las fuentes y enlaces los agrega el sistema aparte: vos no los escribas.
-- Empeza directamente por la respuesta, sin preambulos.
+- Empeza directamente por la respuesta, sin preambulos ni frases del tipo
+  "Segun la informacion disponible".
+- Para enumerar requisitos o montos, usa una lista simple con guiones. No
+  uses tablas: no se leen bien en un celular ni se pueden leer en voz alta.
+- NO uses encabezados con # ni texto en negrita.
+- NO escribas URLs ni nombres de documentos dentro del texto. El sistema
+  agrega las fuentes y los enlaces aparte, ya verificados. Citar la fuente
+  dentro de la respuesta duplica informacion que puede quedar
+  desactualizada respecto de las fuentes reales.
+- Menciona el organismo cuando sea util, pero no la referencia al
+  documento concreto del que tomaste el dato.
 """
 
 

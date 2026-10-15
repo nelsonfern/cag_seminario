@@ -666,6 +666,38 @@ inexistente, que es justo lo que el enunciado prohibe.
 | 23 | **`supports_prompt_caching` inconsistente** | Era metodo **sincrono** en la clase base y **asincrono** en el proveedor real. Habia que esperarlo sin motivo. | Se unifica como sincrono: depende del modelo, no de una consulta. |
 | 24 | **Acierto de cache atribuido a la app** | Una prueba media aislada daba 14,2% y la primera medicion daba 98,8%. Sin investigar, la conclusion habria sido que el contexto estaba mal armado. | Se escribio `diagnostico_cache.py` para probar con SHA del prefijo. Resultado: la variacion es del proveedor. |
 | 25 | **`await` colgando en `comprobar_proveedor`** | Al unificar `supports_prompt_caching` como sincrono (problema 23) quedo un `await` dentro de la funcion que lo invoca. | Se quito el `await`. Se agregaron 5 pruebas de integracion con `MockTransport`, sin red, que habrian detectado esto. |
+| 26 | **El modelo escribia la fuente dentro del texto** | La regla de forma de respuesta sabia que el sistema iba a agregar las fuentes, pero no lo prohibia de forma explicita. En la consulta de costos escribio "(Fuente: documento "Solicitud de Partidas"...)", duplicando una cita que puede quedar desincronizada de las que el verificador si encontro. | Se explicito: prohibido escribir URLs o nombres de documento dentro del texto. |
+| 27 | **Pruebas sobre el prompt que se rompen al reformatearlo** | Las aserciones comparaban texto literal del prompt, que esta envuelto a ~78 columnas. Una frase partida entre dos lineas hacia fallar el test sin que cambiara el comportamiento. | Se agrego `_reglas_normalizadas()`, que colapsa espacios antes de comparar. |
+
+### 4.6b Ajuste de la forma de la respuesta
+
+Tras ver la primera salida real se cambio la regla que pedia prosa sin
+markdown. Ahora se permiten **listas con guiones** pero se siguen
+prohibiendo tablas, encabezados y URLs.
+
+El motivo: una lista de precios en parrafo se lee peor que en lista, y el
+guion no impide ni la lectura en voz alta ni la exportacion a CSV, que si
+impiden las tablas.
+
+### 4.6c Verificacion contra el modelo real (consola)
+
+Dos pruebas manuales con el corpus real:
+
+**Abstencion.** Preguntado por el plazo de entrega y por el horario de
+atencion. Ninguno figura en el corpus. Las dos respuestas fueron
+*"No tengo informacion suficiente en las fuentes consultadas."*, sin
+inventar un plazo ni un horario.
+
+**Costos.** La respuesta incluye los tres montos correctos ($1.100
+certificada, $1.500 legalizada, y la exencion para tramites de
+identificacion y primera copia de matrimonio) y, sin que se le pidiera,
+reproduce la salvedad de la fuente: *"la Municipalidad de La Rioja podria
+fijar una tasa propia para las actas inscriptas en el Registro de la
+Ciudad"*.
+
+Que el modelo agregue esa advertencia por su cuenta es el mejor resultado
+obtenido hasta ahora: el enunciado pide informar las discrepancias entre
+fuentes, y aparecio sin que nadie se lo recordara.
 
 ### 4.6 Decisiones de diseno
 
