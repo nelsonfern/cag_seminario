@@ -1272,7 +1272,131 @@ reproducible en scripts/demo_recuperacion.py que no gasta tokens.
 3. **Guia de exposicion** y lectura de los resultados.
 
 ---
+---
 
 ## Fase 8 - Dataset completo y experimento
 
-**Estado:** no iniciada.
+**Estado:** dataset completo y evaluador terminado. Experimento lanzado.
+
+### 8.1 El dataset: 50 preguntas, 10 por categoría
+
+Completado en `app/evaluation/dataset.py`. Cada referencia se transcribio de
+las paginas oficiales descargadas en la Fase 2, y un script de verificacion
+comprueba que los 50 conjuntos de `datos_clave` aparecen literalmente en el
+corpus.
+
+| Categoria | Cantidad | Que mide |
+|-----------|----------|----------|
+| Requisitos | 10 | Si encuentra los documentos que hay que llevar |
+| Procedimiento | 10 | Si arma el paso a paso |
+| Multi seccion | 10 | Si combina secciones de un mismo documento |
+| Ambigua | 10 | Si cubre la ambiguedad en vez de elegir por su cuenta |
+| **Fuera de corpus** | **10** | **Si se abstiene en vez de inventar** |
+
+Las diez de fuera de corpus son las que separan un sistema honesto de uno
+que confabula. Un sistema que contesta esas diez tiene 100% de acierto
+aparente y 0% de honestidad.
+
+### 8.2 Tres casos donde la fuente esta rota
+
+El corpus tiene defectos reales, y se dejaron sin rellenar en vez de
+inventar el dato:
+
+1. **El costo del matrimonio aparece como `$??`** en la pagina oficial.
+2. **El costo de la rectificacion tambien aparece como `$??`.**
+3. **El costo de las partidas sale de la Ley Impositiva 2024**, pero la
+   propia fuente advierte que "la Municipalidad de La Rioja podrá establecer
+   su propia tasa".
+
+Los tres estan en el dataset. Un sistema honesto tiene que decir "la fuente
+no declara el monto", y ese es el comportamiento que se mide.
+
+### 8.3 El evaluador: `app/evaluation/scorer.py`
+
+Juzga 100 respuestas por hechos, no por calidad de prosa. Distingue cuatro
+fallos que dicen cosas distintas del sistema:
+
+| Fallo | Que significa |
+|-------|--------------|
+| Respondio sin evidencia | **Confabulacion.** Afirmo un dato que no esta. El peor. |
+| Abstension indebida | Se callo y la respuesta existia |
+| Respuesta incompleta | No confabulа, pero le falta un dato clave |
+| Sin respaldo verificable | Dice lo correcto y el verificador local no lo sostiene |
+
+El campo `datos_clave` existe para no leer cien respuestas a ojo. Y
+`debe_abstenerse` convierte la honestidad en una metrica, no en una
+impresion.
+
+### 8.4 Un agujero real en el evaluador
+
+La primera version de `es_abstencion` buscaba cadenas fijas y, si
+encontraba una, la devolvia como abstencion. Eso tenia un hueco
+importante:
+
+> Un sistema podia responder **"No tengo informacion"** y dos frases mas
+> despues **inventar un telefono**, y el evaluador lo contaba como
+> abstencion correcta.
+
+Es el peor fallo posible disfrazado de prudencia. Se corrigio asi:
+
+1. Se trocea la respuesta en fragmentos por oraciones, punto y coma y
+   coma, no solo por oraciones.
+2. Se quitan los fragmentos que son declaracion de ausencia.
+3. Lo que queda se mira: si tiene un numero o un bloque largo de palabras,
+   **no era una abstencion**.
+
+El numero es la senal mas fuerte: cualquier dato util de un tramite trae
+digitos, y un telefono inventado tambien.
+
+Hay 22 pruebas del detector con casos que se ven a ojo, incluidas tres
+contradicciones deliberadas.
+
+**Limitacion declarada:** el detector no distingue "no se declara" seguido
+de una explicacion larga de una respuesta sin numeros. Ante la duda cuenta
+como abstencion, que es el error conservador.
+
+### 8.5 El dataset casi se duplica
+
+R01 y R02 eran casi la misma pregunta, con la misma respuesta esperada. En
+la primera prueba de humo, R02 con RAG devolvio el procedimiento de
+**rectificacion de partidas** en vez del de solicitud de partidas.
+
+Antes de culpar a RAG se verifico la referencia contra el documento: era
+correcta. As que era una falla real de recuperacion. Pero dosCupos del
+dataset mediendo lo mismo es desperdicio, y R02 se cambio por una
+pregunta sobre el caso **sin cargo**, que es un dato distinto.
+
+**Regla que queda:** antes de reportar un fallo del sistema, comprobar que
+la referencia es correcta. Un evaluador mal escrito produce conclusions que no existen.
+
+### 8.6 Problemas encontrados
+
+| # | Problema | Causa | Resolucion |
+|---|----------|-------|------------|
+| 47 | **El evaluador aceptaba "no tengo informacion... pero el telefono es 0264-4300000" como abstencion** | La deteccion buscaba cadenas y devolvia la primera coincidencia, sin mirar el resto de la respuesta. | Se trocea la respuesta y se descarta solo lo que es declaracion de ausencia. Lo que queda se analiza. 22 pruebas lo cubren. |
+| 48 | **El patron no encontraba "no esta declarado"** | Buscaba la forma literal del verbo "estar" y exigia un modal previo. | Un patron con las tres formas: sin modal, con "se", y con "no puede estar". |
+| 49 | **La troceada exigia mayuscula despues de la coma** | En espanol es corriente que siga en minuscula, y el caso que importa justamente lo es. | Se trocea por toda coma. |
+| 50 | **R01 y R02 duplicaban la misma comprobacion** | Dos preguntas casi identicas con la misma respuesta esperada. | R02 pasa a preguntar por el caso sin cargo, que es otro dato. |
+
+---
+
+## Estado del proyecto
+
+| Fase | Estado |
+|------|--------|
+| 1 - Arquitectura | Completada |
+| 2 - Ingesta | Completada |
+| 3 - Proveedor LLM y agente | Completada |
+| 4 - CAG | Completada |
+| 5 - RAG | Completada |
+| 6 - API | Completada |
+| 7 - Interfaz web | Completada y corregida |
+| 8 - Dataset y experimento | **En curso** |
+| 9 - Documentacion final | Pendiente |
+
+**317 pruebas pasan**, lint limpio.
+
+### Lo que falta para cerrar
+
+1. **Leer el informe del experimento** y escribir la guia de exposicion.
+2. **La guia de exposicion**: que mostrar en vivo y que decir.

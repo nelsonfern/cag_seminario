@@ -1,0 +1,48 @@
+
+Experimento: 50 preguntas x 2 estrategias
+Pausa entre consultas: 18.0 s
+El limite del proveedor es de 8.000 tokens por minuto; esto va a tardar.
+
+2026-10-15 18:25:17 | INFO     | tramitaia.cag | Contexto CAG preparado: 6 documentos, ~3730 tokens en 5.4 ms
+2026-10-15 18:25:25 | INFO     | sentence_transformers.base.model | No device provided, using cpu
+2026-10-15 18:25:25 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-15 18:25:25 | WARNING  | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-10-15 18:25:25 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/modules.json?%2Fsentence-transformers%2Fparaphrase-multilingual-MiniLM-L12-v2%2Fresolve%2Fmain%2Fmodules.json=&etag=%22f7640f94e81bb7f4f04daf1668850b38763a13d9%22 "HTTP/1.1 200 OK"
+2026-10-15 18:25:25 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-15 18:25:25 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/config_sentence_transformers.json?%2Fsentence-transformers%2Fparaphrase-multilingual-MiniLM-L12-v2%2Fresolve%2Fmain%2Fconfig_sentence_transformers.json=&etag=%22b974b349cb2d419ada11181750a733ff82f291ad%22 "HTTP/1.1 200 OK"
+2026-10-15 18:25:25 | INFO     | sentence_transformers.base.model | Loading SentenceTransformer model from sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2.
+2026-10-15 18:25:25 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-15 18:25:26 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/config_sentence_transformers.json?%2Fsentence-transformers%2Fparaphrase-multilingual-MiniLM-L12-v2%2Fresolve%2Fmain%2Fconfig_sentence_transformers.json=&etag=%22b974b349cb2d419ada11181750a733ff82f291ad%22 "HTTP/1.1 200 OK"
+2026-10-15 18:25:26 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2026-10-15 18:25:26 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/README.md?%2Fsentence-transformers%2Fparaphrase-multilingual-MiniLM-L12-v2%2Fresolve%2Fmain%2FREADME.md=&etag=%226bedb7f3622d56b7020f33ab93f6996d33242043%22 "HTTP/1.1 200 OK"
+2026-10-15 18:25:26 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-15 18:25:26 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/modules.json?%2Fsentence-transformers%2Fparaphrase-multilingual-MiniLM-L12-v2%2Fresolve%2Fmain%2Fmodules.json=&etag=%22f7640f94e81bb7f4f04daf1668850b38763a13d9%22 "HTTP/1.1 200 OK"
+2026-10-15 18:25:26 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/sentence_bert_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-15 18:25:26 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/sentence_bert_config.json?%2Fsentence-transformers%2Fparaphrase-multilingual-MiniLM-L12-v2%2Fresolve%2Fmain%2Fsentence_bert_config.json=&etag=%225fd10429389515d3e5cccdeda08cae5fea1ae82e%22 "HTTP/1.1 200 OK"
+2026-10-15 18:25:26 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/adapter_config.json "HTTP/1.1 404 Not Found"
+2026-10-15 18:25:27 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 "HTTP/1.1 200 OK"
+2026-10-15 18:25:27 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 "HTTP/1.1 200 OK"
+2026-10-15 18:25:28 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 "HTTP/1.1 200 OK"
+2026-10-15 18:25:28 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-10-15 18:25:28 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-10-15 18:25:30 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 "HTTP/1.1 200 OK"
+2026-10-15 18:25:31 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/1_Pooling/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-15 18:25:31 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/1_Pooling%2Fconfig.json?%2Fsentence-transformers%2Fparaphrase-multilingual-MiniLM-L12-v2%2Fresolve%2Fmain%2F1_Pooling%2Fconfig.json=&etag=%22d1514c3162bbe87b343f565fadc62e6c06f04f03%22 "HTTP/1.1 200 OK"
+2026-10-15 18:25:31 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 "HTTP/1.1 200 OK"
+2026-10-15 18:25:31 | INFO     | tramitaia.rag | Modelo de embeddings cargado en 14007 ms: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+2026-10-15 18:25:34 | INFO     | tramitaia.rag | Indice RAG construido: 41 fragmentos en 17281.4 ms
+2026-10-15 18:25:34 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 17331.9 ms (emb 38.8 + busq 10.8)
+2026-10-15 18:25:34 | INFO     | tramitaia.llm | Proveedor LLM inicializado: openai_compatible / openai/gpt-oss-120b
+2026-10-15 18:25:36 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:25:36 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1516ms in=3951
+  [1/50] R01  CAG  ok     1516ms in=3951 
+2026-10-15 18:25:54 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 48.5 ms (emb 44.7 + busq 2.3)
+2026-10-15 18:25:55 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:25:55 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=False citadas=0 lat=989ms in=1454
+  [1/50] R01  RAG  MAL     984ms in=1454 abstencion indebida: la respuesta existia
+2026-10-15 18:26:14 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:26:14 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1109ms in=3954
+  [2/50] R02  CAG  ok     1109ms in=3954 
+2026-10-15 18:26:32 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 65.7 ms (emb 61.7 + busq 2.7)
+2026-10-15 18:26:33 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:26:33 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=False citadas=0 lat=1435ms in=1452
