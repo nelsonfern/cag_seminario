@@ -77,7 +77,8 @@ async def ejecutar(
             if fila["error"]:
                 print(
                     f"  [{indice}/{len(preguntas)}] {pregunta['id']:<4} "
-                    f"{estrategia.value.upper():<4} ERROR: {fila['error'][:60]}"
+                    f"{estrategia.value.upper():<4} ERROR: {fila['error'][:60]}",
+                    flush=True,
                 )
             else:
                 v = _juzgar(pregunta, fila)
@@ -88,8 +89,19 @@ async def ejecutar(
                     f"{estrategia.value.upper():<4} {marca} "
                     f"{fila['latencia_ms']:>7.0f}ms "
                     f"in={fila['tokens_entrada']} "
-                    f"{v['fallo'][:44]}"
+                    f"{v['fallo'][:44]}",
+                    flush=True,
                 )
+
+            # Se guarda despues de cada consulta, no al final.
+            #
+            # El proveedor limita a 8.000 tokens por minuto y avisa que
+            # espere cientos de segundos. Una corrida completa puede
+            # tardar horas y, si se corta, sin esto se pierde todo lo
+            # hecho. Un informe parcial es un informe real: dice cuantas
+            # consultas se hicieron y cuales fueron.
+            _guardar_parcial(resultados, veredictos, estrategias, len(preguntas))
+
             await asyncio.sleep(pausa)
 
     informe: dict[str, Any] = {
@@ -150,6 +162,37 @@ async def _una(agente: Agente, pregunta: dict[str, Any], estrategia: Estrategia)
 
 def _juzgar(pregunta: dict[str, Any], fila: dict[str, Any]) -> dict[str, Any]:
     return juzgar(fila["respuesta"], fila["grounded"], pregunta)
+
+
+def _guardar_parcial(
+    resultados: list[dict[str, Any]],
+    veredictos: dict[str, list[dict[str, Any]]],
+    estrategias: list[Estrategia],
+    total_preguntas: int,
+) -> Path:
+    """Escribe el informe a medias, despues de cada consulta.
+
+    Se escribe siempre en el mismo archivo, `informe-parcial.json`, que
+    se sobrescribe. Guardar por consulta sin diferencia entre versiones
+    llenaria el disco de copias casi iguales.
+    """
+    informe: dict[str, Any] = {
+        "generado": datetime.now(UTC).isoformat(),
+        "modelo": get_settings().model_name,
+        "proveedor": get_settings().llm_provider,
+        "estado": "en_curso",
+        "total_preguntas": total_preguntas,
+        "consultas_hechas": len(resultados),
+        "por_estrategia": {e.value: resumir(veredictos[e.value]) for e in estrategias},
+        "detalle": resultados,
+    }
+    if {e.value for e in estrategias} == {"cag", "rag"}:
+        informe["comparacion"] = comparar_estrategias(veredictos["cag"], veredictos["rag"])
+
+    destino = get_settings().results_dir / "informe-parcial.json"
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text(json.dumps(informe, indent=2, ensure_ascii=False), encoding="utf-8")
+    return destino
 
 
 def imprimir_informe(informe: dict[str, Any]) -> None:

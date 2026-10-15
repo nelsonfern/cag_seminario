@@ -58,3 +58,142 @@ El limite del proveedor es de 8.000 tokens por minuto; esto va a tardar.
 2026-10-15 18:27:31 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1785ms in=3950
   [4/50] R04  CAG  ok     1797ms in=3950 
 2026-10-15 18:27:49 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 61.7 ms (emb 56.4 + busq 4.4)
+2026-10-15 18:27:50 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:27:50 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=1398ms in=1523
+  [4/50] R04  RAG  ok     1406ms in=1523 
+2026-10-15 18:28:10 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:28:10 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1669ms in=3954
+  [5/50] R05  CAG  MAL    1672ms in=3954 respuesta incompleta: falta 48
+2026-10-15 18:28:28 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 50.5 ms (emb 46.6 + busq 2.5)
+2026-10-15 18:28:29 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:28:29 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=938ms in=1592
+  [5/50] R05  RAG  ok      953ms in=1592 
+2026-10-15 18:28:48 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:28:48 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1375ms in=3951
+  [6/50] R06  CAG  ok     1375ms in=3951 
+2026-10-15 18:29:06 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 45.1 ms (emb 42.0 + busq 2.0)
+2026-10-15 18:29:07 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:29:07 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=False citadas=0 lat=716ms in=1362
+  [6/50] R06  RAG  MAL     703ms in=1362 abstencion indebida: la respuesta existia
+2026-10-15 18:29:26 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:29:26 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=927ms in=3950
+  [7/50] R07  CAG  ok      938ms in=3950 
+2026-10-15 18:29:44 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 49.7 ms (emb 45.5 + busq 2.8)
+2026-10-15 18:29:46 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:29:46 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=2 lat=1634ms in=1485
+  [7/50] R07  RAG  ok     1640ms in=1485 
+2026-10-15 18:30:05 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:30:05 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=3 lat=997ms in=3951
+  [8/50] R08  CAG  ok     1016ms in=3951 
+2026-10-15 18:30:23 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 79.0 ms (emb 72.3 + busq 4.4)
+2026-10-15 18:30:24 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:30:24 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=1 lat=805ms in=1610
+  [8/50] R08  RAG  ok      813ms in=1610 
+2026-10-15 18:30:44 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:30:44 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1955ms in=3952
+  [9/50] R09  CAG  ok     1968ms in=3952 
+2026-10-15 18:31:02 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 60.2 ms (emb 46.3 + busq 2.3)
+2026-10-15 18:31:03 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:31:03 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=1533ms in=1446
+  [9/50] R09  RAG  MAL    1532ms in=1446 respuesta incompleta: falta certificado médi
+2026-10-15 18:31:22 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:31:22 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1312ms in=3949
+  [10/50] R10  CAG  MAL    1313ms in=3949 respuesta incompleta: falta 25.506
+2026-10-15 18:31:40 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 44.9 ms (emb 39.6 + busq 3.8)
+2026-10-15 18:31:42 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:31:42 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=1336ms in=1580
+  [10/50] R10  RAG  ok     1343ms in=1580 
+2026-10-15 18:32:01 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:32:01 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1547ms in=3949
+  [11/50] P01  CAG  ok     1547ms in=3949 
+2026-10-15 18:32:19 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 39.6 ms (emb 36.2 + busq 2.2)
+2026-10-15 18:32:21 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:32:21 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=1414ms in=1445
+  [11/50] P01  RAG  MAL    1422ms in=1445 respuesta incompleta: falta digital, Ciudada
+2026-10-15 18:32:42 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:32:42 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=2985ms in=3949
+  [12/50] P02  CAG  ok     2984ms in=3949 
+2026-10-15 18:33:00 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 29.0 ms (emb 25.4 + busq 2.1)
+2026-10-15 18:33:02 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:33:02 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=2093ms in=1638
+  [12/50] P02  RAG  ok     2094ms in=1638 
+2026-10-15 18:33:21 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:33:21 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1072ms in=3953
+  [13/50] P03  CAG  ok     1078ms in=3953 
+2026-10-15 18:33:39 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 40.9 ms (emb 37.2 + busq 2.1)
+2026-10-15 18:33:40 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:33:40 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=3 lat=1048ms in=1420
+  [13/50] P03  RAG  MAL    1047ms in=1420 respuesta incompleta: falta Mis trámites, co
+2026-10-15 18:33:59 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:33:59 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=3 lat=1118ms in=3952
+  [14/50] P04  CAG  ok     1125ms in=3952 
+2026-10-15 18:34:17 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 37.2 ms (emb 34.3 + busq 1.8)
+2026-10-15 18:34:19 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:34:19 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=2 lat=1798ms in=1477
+  [14/50] P04  RAG  ok     1797ms in=1477 
+2026-10-15 18:34:38 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:34:38 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1293ms in=3948
+  [15/50] P05  CAG  ok     1313ms in=3948 
+2026-10-15 18:34:56 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 32.8 ms (emb 29.3 + busq 2.0)
+2026-10-15 18:34:57 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:34:57 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=1150ms in=1548
+  [15/50] P05  RAG  ok     1156ms in=1548 
+2026-10-15 18:35:17 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:35:17 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=2114ms in=3951
+  [16/50] P06  CAG  ok     2125ms in=3951 
+2026-10-15 18:35:36 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 40.2 ms (emb 36.4 + busq 2.2)
+2026-10-15 18:35:37 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:35:37 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=1402ms in=1590
+  [16/50] P06  RAG  ok     1390ms in=1590 
+2026-10-15 18:35:57 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:35:57 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1815ms in=3950
+  [17/50] P07  CAG  ok     1812ms in=3950 
+2026-10-15 18:36:15 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 38.2 ms (emb 34.9 + busq 2.0)
+2026-10-15 18:36:16 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:36:16 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=3 lat=1723ms in=1499
+  [17/50] P07  RAG  ok     1719ms in=1499 
+2026-10-15 18:36:35 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-10-15 18:36:35 | WARNING  | tramitaia.llm | Reintento 1/2; esperando 2.0s por limite del proveedor
+2026-10-15 18:36:38 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:36:38 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=3568ms in=3951
+  [18/50] P08  CAG  ok     3578ms in=3951 
+2026-10-15 18:36:56 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 48.9 ms (emb 44.4 + busq 3.1)
+2026-10-15 18:36:57 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:36:57 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=1368ms in=1439
+  [18/50] P08  RAG  MAL    1359ms in=1439 respuesta incompleta: falta turno
+2026-10-15 18:37:17 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:37:17 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1928ms in=3951
+  [19/50] P09  CAG  ok     1921ms in=3951 
+2026-10-15 18:37:35 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 46.2 ms (emb 42.2 + busq 2.3)
+2026-10-15 18:37:37 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:37:37 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=1943ms in=1463
+  [19/50] P09  RAG  ok     1953ms in=1463 
+2026-10-15 18:37:57 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:37:57 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=2111ms in=3950
+  [20/50] P10  CAG  ok     2110ms in=3950 
+2026-10-15 18:38:15 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 48.1 ms (emb 44.7 + busq 2.0)
+2026-10-15 18:38:16 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:38:16 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=3 lat=966ms in=1601
+  [20/50] P10  RAG  ok      968ms in=1601 
+2026-10-15 18:38:36 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:38:36 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1480ms in=3955
+  [21/50] M01  CAG  ok     1484ms in=3955 
+2026-10-15 18:38:54 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 45.8 ms (emb 41.4 + busq 2.8)
+2026-10-15 18:38:55 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:38:55 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=3 lat=1533ms in=1521
+  [21/50] M01  RAG  MAL    1531ms in=1521 respuesta incompleta: falta Ciudadano Digita
+2026-10-15 18:39:15 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:39:15 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=1808ms in=3953
+  [22/50] M02  CAG  ok     1812ms in=3953 
+2026-10-15 18:39:33 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 46.0 ms (emb 42.0 + busq 2.2)
+2026-10-15 18:39:36 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:39:36 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=3197ms in=1493
+  [22/50] M02  RAG  MAL    3203ms in=1493 respuesta incompleta: falta firma digital
+2026-10-15 18:39:55 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-10-15 18:39:55 | WARNING  | tramitaia.llm | Reintento 1/2; esperando 862.0s por limite del proveedor
+2026-10-15 18:54:46 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:54:46 | INFO     | tramitaia.agent | respuesta | estrategia=cag grounded=True citadas=4 lat=891328ms in=3951
+  [23/50] M03  CAG  ok   891157ms in=3951 
+2026-10-15 18:55:04 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 47.7 ms (emb 36.7 + busq 2.2)
+2026-10-15 18:55:05 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-15 18:55:05 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=1453ms in=1401
