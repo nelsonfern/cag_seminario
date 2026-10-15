@@ -27,7 +27,8 @@ sys.path.insert(0, str(PROYECTO))
 from app.services.agent import REGLAS_SISTEMA  # noqa: E402
 from app.services.cag import CAGService  # noqa: E402
 
-CONSULTAS = [
+# Preguntas de ejemplo, elegidas para que cada una pruebe algo distinto.
+CONSULTAS_EJEMPLO = [
     "¿Qué documentación necesito para solicitar una partida de nacimiento?",
     "¿Cuánto cuesta la copia de acta certificada?",
     "¿En qué organismo se inicia el trámite de un matrimonio?",
@@ -49,7 +50,25 @@ async def main() -> int:
         "--consultas", action="store_true", help="Ejecutar consultas reales al modelo"
     )
     parser.add_argument("--force", action="store_true", help="Reconstruir el contexto")
+    parser.add_argument(
+        "-p",
+        "--pregunta",
+        action="append",
+        default=None,
+        metavar="TEXTO",
+        help=(
+            "Consulta a ejecutar. Se puede repetir para varias. "
+            "Sin este flag se usan las preguntas de ejemplo."
+        ),
+    )
+    parser.add_argument(
+        "--ver-respuesta",
+        action="store_true",
+        help="Imprime tambien el texto que responde el modelo",
+    )
     args = parser.parse_args()
+
+    consultas = args.pregunta or CONSULTAS_EJEMPLO
 
     servicio = CAGService()
 
@@ -119,7 +138,7 @@ async def main() -> int:
     contexto = servicio.preparar()
 
     aciertos: list[float] = []
-    for indice, pregunta in enumerate(CONSULTAS, start=1):
+    for indice, pregunta in enumerate(consultas, start=1):
         mensajes = [
             {"role": "system", "content": REGLAS_SISTEMA},
             {
@@ -139,13 +158,16 @@ async def main() -> int:
         else:
             cache = "no reportada"
 
-        print(f"   [{indice}] {pregunta[:58]}")
+        print(f"   [{indice}] {pregunta}")
         print(f"       latencia {lat:>7.0f} ms | in={uso.tokens_entrada} out={uso.tokens_salida}")
         print(f"       cache: {cache}")
+
+        if args.ver_respuesta:
+            print(f"       respuesta: {r.texto.strip()[:600]}")
         print()
 
         # El limite de tokens por minuto obliga a pausar entre llamadas.
-        if indice < len(CONSULTAS):
+        if indice < len(consultas):
             time.sleep(16)
 
     if aciertos:

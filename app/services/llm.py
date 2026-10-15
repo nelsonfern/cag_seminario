@@ -621,7 +621,7 @@ async def comprobar_proveedor() -> dict[str, Any]:
         "detalle": redact(detalle),
         # Se consulta de verdad y no se supone: el agente lo necesita para
         # saber si puede registrar la metrica de cache.
-        "soporta_cache": await proveedor.supports_prompt_caching(),
+        "soporta_cache": proveedor.supports_prompt_caching(),
     }
 
 

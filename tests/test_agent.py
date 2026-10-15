@@ -498,6 +498,121 @@ class TestProveedorFalso:
         assert es_abstencion(respuesta.texto)
 
 
+class TestDiagnosticoProveedor:
+    """`comprobar_proveedor` lo usan el script de CAG y el de agente.
+
+    Que fallara hacia la seccion 6 de la consola, despues de imprimir
+    cinco bloques correctos, es exactamente el tipo de fallo que una
+    prueba de integracion evita.
+    """
+
+    def test_comprobar_proveedor_devuelve_informe(self) -> None:
+        from app.services.llm import comprobar_proveedor, reiniciar_proveedor
+
+        reiniciar_proveedor()
+        informe = asyncio.run(comprobar_proveedor())
+
+        assert informe["proveedor"] == "fake"
+        assert informe["modelo"]
+        assert "disponible" in informe
+        assert isinstance(informe["soporta_cache"], bool)
+
+    def test_informe_no_filtra_credenciales(self) -> None:
+        """El informe va a la consola y a /health: no puede llevar la clave."""
+
+        from app.services.llm import ProveedorOpenAICompatible
+
+        proveedor = ProveedorOpenAICompatible(
+            modelo="openai/gpt-oss-120b",
+            base_url="http://localhost:1",
+            api_key="sk-probacion-secreta-1234567890",
+            timeout=1.0,
+        )
+
+        ok, detalle = asyncio.run(proveedor.disponible())
+
+        assert ok is False
+        assert "sk-probacion-secreta" not in detalle
+
+    def test_error_401_no_reintenta(self) -> None:
+        """Una credencial invalida no mejora esperando: falla de inmediato."""
+        import httpx
+
+        from app.services.llm import LLMError, ProveedorOpenAICompatible
+
+        llamadas = {"n": 0}
+
+        def _responder(_request: httpx.Request) -> httpx.Response:
+            llamadas["n"] += 1
+            return httpx.Response(401, text="invalid api key")
+
+        transporte = httpx.MockTransport(_responder)
+        proveedor = ProveedorOpenAICompatible(
+            modelo="m", base_url="http://x", api_key="k", max_reintentos=3
+        )
+        proveedor._cliente = httpx.AsyncClient(
+            base_url="http://x", transport=transporte, headers={}
+        )
+
+        with pytest.raises(LLMError, match="credencial"):
+            asyncio.run(proveedor.completar([{"role": "user", "content": "x"}]))
+
+        # Una sola llamada: reintentar un 401 seria gastar tiempo en futile.
+        assert llamadas["n"] == 1
+
+    def test_error_429_si_reintenta(self) -> None:
+        """El limite de uso es transitorio: ahi si conviene reintentar."""
+        import httpx
+
+        from app.services.llm import ProveedorOpenAICompatible
+
+        llamadas = {"n": 0}
+
+        def _responder(request: httpx.Request) -> httpx.Response:
+            llamadas["n"] += 1
+            if llamadas["n"] == 1:
+                return httpx.Response(429, headers={"retry-after": "1"}, text="rate limit")
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+                    "usage": {"prompt_tokens": 10, "completion_tokens": 2},
+                },
+            )
+
+        transporte = httpx.MockTransport(_responder)
+        proveedor = ProveedorOpenAICompatible(
+            modelo="m", base_url="http://x", api_key="k", max_reintentos=2
+        )
+        proveedor._cliente = httpx.AsyncClient(
+            base_url="http://x", transport=transporte, headers={}
+        )
+
+        respuesta = asyncio.run(proveedor.completar([{"role": "user", "content": "x"}]))
+
+        assert respuesta.texto == "ok"
+        assert llamadas["n"] == 2
+
+    def test_exhaustir_reintentos_propaga_error(self) -> None:
+        import httpx
+
+        from app.services.llm import LLMError, ProveedorOpenAICompatible
+
+        def _responder(_request: httpx.Request) -> httpx.Response:
+            return httpx.Response(429, headers={"retry-after": "1"}, text="rate limit")
+
+        transporte = httpx.MockTransport(_responder)
+        proveedor = ProveedorOpenAICompatible(
+            modelo="m", base_url="http://x", api_key="k", max_reintentos=1
+        )
+        proveedor._cliente = httpx.AsyncClient(
+            base_url="http://x", transport=transporte, headers={}
+        )
+
+        with pytest.raises(LLMError, match="limite de uso"):
+            asyncio.run(proveedor.completar([{"role": "user", "content": "x"}]))
+
+
 class TestMetricasDeTokens:
     def test_estimacion_es_aproximada(self) -> None:
         """La estimacion no es una metrica: se usa solo para controles previos."""
