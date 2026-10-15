@@ -61,10 +61,12 @@ class TestConfiguracion:
         campos = Settings.model_fields
 
         assert campos["app_name"].default == "TramitaIA"
-        assert campos["llm_provider"].default == "ollama"
+        assert campos["llm_provider"].default == "openai_compatible"
         assert campos["rag_top_k"].default == 5
-        # El presupuesto de CAG debe dejar margen para prompt y respuesta.
-        assert campos["cag_max_context_tokens"].default < campos["ollama_context_length"].default
+        # El presupuesto de CAG por defecto debe entrar en la ventana de
+        # contexto por defecto, sea cual sea el proveedor elegido.
+        for ventana in ("ollama_context_length", "openai_context_length"):
+            assert campos["cag_max_context_tokens"].default < campos[ventana].default, ventana
 
     def test_variables_de_entorno_ganan_a_los_defaults(self, monkeypatch) -> None:
         monkeypatch.setenv("LLM_PROVIDER", "ollama")
@@ -107,6 +109,29 @@ class TestConfiguracion:
     def test_openai_exige_base_url_y_modelo(self) -> None:
         with pytest.raises(ValueError, match="OPENAI_BASE_URL"):
             Settings(_env_file=None, llm_provider="openai_compatible")
+
+    def test_openai_exige_modelo(self) -> None:
+        with pytest.raises(ValueError, match="OPENAI_MODEL"):
+            Settings(_env_file=None, llm_provider="openai_compatible", openai_base_url="http://x")
+
+    def test_ventana_de_contexto_se_declara_por_proveedor(self) -> None:
+        """Cada proveedor tiene su propia ventana; no hay un default generico."""
+        ollama = Settings(
+            _env_file=None,
+            llm_provider="ollama",
+            ollama_context_length=4096,
+            cag_max_context_tokens=3000,
+        )
+        remoto = Settings(
+            _env_file=None,
+            llm_provider="openai_compatible",
+            openai_base_url="http://x",
+            openai_model="m",
+            openai_context_length=128000,
+        )
+
+        assert ollama.model_context_window == 4096
+        assert remoto.model_context_window == 128000
 
     def test_log_level_invalido_es_error(self) -> None:
         with pytest.raises(ValueError, match="LOG_LEVEL"):

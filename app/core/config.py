@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # Proveedor de LLM
     # -------------------------------------------------------------------------
-    llm_provider: Literal["fake", "ollama", "openai_compatible"] = "ollama"
+    llm_provider: Literal["fake", "ollama", "openai_compatible"] = "openai_compatible"
 
     # --- Ollama ---
     ollama_base_url: str = "http://localhost:11434"
@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     openai_base_url: str = ""
     openai_api_key: str = ""
     openai_model: str = ""
+    # Ventana de contexto declarada del modelo remoto.
+    # Se declara a mano porque cada modelo tiene la suya, y el presupuesto de
+    # CAG se valida contra este valor. Un default inflado dejaria pasar
+    # contextos que el proveedor rechaza en produccion.
+    openai_context_length: int = 32768
 
     # --- Generacion ---
     llm_temperature: float = 0.0
@@ -70,7 +75,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # CAG
     # -------------------------------------------------------------------------
-    cag_max_context_tokens: int = 24000
+    cag_max_context_tokens: int = 6000
     cag_cache_dir: Path = Path("data/processed/cag_cache")
     cag_allow_partitioning: bool = True
 
@@ -172,8 +177,10 @@ class Settings(BaseSettings):
         """Ventana de contexto efectiva del modelo configurado."""
         if self.llm_provider == "ollama":
             return self.ollama_context_length
-        # Margen conservador para proveedores de API.
-        return 128_000
+        if self.llm_provider == "openai_compatible":
+            return self.openai_context_length
+        # El proveedor `fake` no tiene ventana real: se declara una comoda.
+        return 8192
 
     @property
     def base_url(self) -> str:

@@ -77,9 +77,7 @@ def _construir_contexto(tokens_objetivo: int) -> str:
     )
 
 
-def _medir(
-    base_url: str, model: str, contexto: str, max_tokens: int, num_ctx: int
-) -> dict:
+def _medir(base_url: str, model: str, contexto: str, max_tokens: int, num_ctx: int) -> dict:
     """Ejecuta una inferencia y devuelve tiempos y conteos reales."""
     payload = {
         "model": model,
@@ -109,9 +107,7 @@ def _medir(
         "tokens_prompt": tokens_prompt,
         "tokens_generados": tokens_eval,
         # Prefill: procesar el contexto. Es lo que domina en CAG.
-        "prefill_tok_s": round(tokens_prompt / (dur_prompt_ns / 1e9), 1)
-        if dur_prompt_ns
-        else None,
+        "prefill_tok_s": round(tokens_prompt / (dur_prompt_ns / 1e9), 1) if dur_prompt_ns else None,
         # Generacion: producir la respuesta.
         "generacion_tok_s": round(tokens_eval / (dur_eval_ns / 1e9), 1) if dur_eval_ns else None,
         "tokens_por_segundo_total": round(tokens_prompt / (latencia_ms / 1000), 1),

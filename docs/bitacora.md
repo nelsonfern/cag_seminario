@@ -87,6 +87,21 @@ mejor prompt**. El enunciado pide tratar los documentos como no confiables
 Un modelo de 1.5B no puede sostener esa defensa por si solo, pero la
 arquitectura es obligatoria en cualquier caso.
 
+**Decision tomada:** el experimento final usara un proveedor con API
+(`openai_compatible`, por defecto OpenRouter). Motivos:
+
+1. Un modelo de 1.5B no sostiene las reglas anti-alucinacion (ver 1.2.3).
+2. La maquina no tiene RAM para un modelo de 3B (ver 1.2.2).
+3. La API expone las **metricas oficiales de prompt caching**, que el
+   enunciado exige registrar y que un servidor local no reporta.
+
+`qwen2.5:1.5b-instruct` queda disponible mediante `LLM_PROVIDER=ollama`
+como linea base para desarrollo y pruebas. El benchmark de la seccion 1.2.1
+se conserva como medicion de referencia del hardware.
+
+Nota: el mismo modelo debe usarse en CAG y en RAG. Si cambian, la
+comparacion deja de ser valida.
+
 ### 1.3 Archivos creados
 
 ```
@@ -143,11 +158,13 @@ Nota adicional sobre Registro Civil: su `robots.txt` prohibe `/rgformulario/`,
 publico. El scraper debe respetar esas exclusiones aunque la pagina de
 tramites los enlace.
 
-### 1.6 Que falta para cerrar la Fase 1
+### 1.7 Que falta para cerrar la Fase 1
 
-- [ ] Decidir proveedor definitivo de LLM segun el benchmark.
-- [ ] Verificar que el embedding multilingue se descarga y funciona.
-- [ ] `git add` de `docs/` y primer commit de la estructura.
+- [x] Decidir proveedor definitivo de LLM segun el benchmark. **Hecho: API.**
+- [x] Verificar que el embedding multilingue se descarga y funciona. **Hecho: OK.**
+- [x] `git add` de `docs/` y commit de la estructura. **Hecho: `651b20a`.**
+- [ ] Obtener una clave de API y cargar `.env` (tarea del desarrollador).
+- [ ] Decidir el recorte concreto del corpus en la Fase 2.
 
 ---
 
