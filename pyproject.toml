@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tramitaia"
+version = "0.1.0"
+description = "Agente de tramites publicos de La Rioja con CAG y RAG"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+
+[tool.setuptools]
+packages = ["app"]
+
+# =============================================================================
+# Pytest
+# =============================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    # Los tests no deben filtrar credenciales reales a la consola.
+    "-p", "no:cacheprovider",
+]
+markers = [
+    "ingestion: pruebas del pipeline de ingesta documental",
+    "cag: pruebas del servicio CAG",
+    "rag: pruebas del servicio RAG",
+    "api: pruebas de endpoints FastAPI",
+    "citations: pruebas de trazabilidad de citas",
+    "evaluacion: pruebas del pipeline de evaluacion",
+    "adversarial: consultas fuera de alcance o con intento de prompt injection",
+]
+
+# =============================================================================
+# Ruff (linter + formateador)
+# =============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "C4",   # comprehensions
+    "SIM",  # simplify
+    "RUF",  # reglas propias de ruff
+]
+ignore = [
+    "E501",  # el formateador ya resuelve el largo de linea
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Los tests usan nombres largos y fixtures descriptivos.
+"tests/*" = ["N802", "N803"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+# =============================================================================
+# Cobertura
+# =============================================================================
+[tool.coverage.run]
+source = ["app"]
+omit = ["*/__init__.py", "app/main.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

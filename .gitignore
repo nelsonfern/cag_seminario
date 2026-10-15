@@ -1,0 +1,46 @@
+# --- Entorno virtual ---
+.venv/
+venv/
+env/
+
+# --- Credenciales (nunca versionar) ---
+.env
+.env.local
+*.pem
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- Herramientas ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# --- Datos descargados y derivados ---
+# El corpus se regenera con los scripts de ingesta.
+# Solo se versiona el manifiesto, para trazabilidad.
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# --- Resultados de experimentos ---
+# Se regeneran corriendo la evaluación.
+results/*
+!results/.gitkeep
+
+# --- Sistema operativo / editores ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

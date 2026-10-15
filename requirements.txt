@@ -1,0 +1,79 @@
+# =============================================================================
+# TramitaIA - Dependencias
+# =============================================================================
+# Instalacion:
+#   python -m venv .venv
+#   .venv\Scripts\activate          (Windows)
+#   source .venv/bin/activate       (Linux / macOS)
+#   pip install -r requirements.txt
+#
+# Verificar que se instalo sobre Python 3.12:
+#   python --version
+# =============================================================================
+
+# --- API web ---
+# FastAPI: framework de la API. Genera la documentacion OpenAPI automaticamente.
+fastapi>=0.115,<1.0
+# Uvicorn: servidor ASGI. Ya viene como dependencia de fastapi[standard],
+# pero se declara explicito porque se ejecuta directamente.
+uvicorn[standard]>=0.32,<1.0
+
+# --- Validacion y configuracion ---
+# Pydantic: validacion de entrada/salida de la API y de la configuracion.
+pydantic>=2.9,<3.0
+# pydantic-settings: leer variables de entorno y .env de forma tipada.
+# Se separa de Pydantic para no acoplar la validacion de la API a la config.
+pydantic-settings>=2.6,<3.0
+# python-dotenv: backend de lectura de archivos .env.
+python-dotenv>=1.0
+
+# --- Cliente HTTP ---
+# httpx: cliente asincrono para llamar al proveedor de LLM.
+# Tambien se usa en las pruebas de endpoints.
+httpx>=0.27,<1.0
+
+# --- Procesamiento documental ---
+# PyMuPDF: extraccion de texto de PDF. El mas rapido y sin dependencias externas.
+pymupdf>=1.24,<2.0
+# BeautifulSoup: extraccion de texto de HTML.
+beautifulsoup4>=4.12,<5.0
+# lxml: parser de HTML/XML, mas robusto que html.parser en contenido real de sitios.
+lxml>=5.3
+# python-docx: soporte opcional de archivos DOCX del corpus.
+python-docx>=1.1,<2.0
+
+# --- RAG ---
+# sentence-transformers: embeddings multilingues.
+# NOTA: arrastra torch como dependencia (~2.5 GB en CPU).
+# Requisito de Python 3.12: en 3.13+ no hay wheels de torch disponibles.
+sentence-transformers>=3.3,<7.0
+# chromadb: indice vectorial persistente.
+# Alternativa a FAISS, que no publica wheels para Windows.
+chromadb>=0.5.24,<2.0
+
+# --- Fijados por una restriccion del entorno de Windows ---
+#
+# La maquina de desarrollo tiene activa una politica WDAC que exige firma
+# "Enterprise" y solo admite binarios con reputacion. scipy>=1.15 publica
+# un _sobol.pyd sin reputacion y falla al importar:
+#   ImportError: DLL load failed while importing _sobol
+# scipy lo arrastra scikit-learn y, con el, sentence-transformers.
+# Ver seccion 1.2 de docs/bitacora.md. No aflojar el pin sin comprobar
+# antes `python -c "import scipy.stats"`.
+scipy==1.14.1
+numpy>=2.2,<2.3
+
+# --- Utilidades ---
+# python-dateutil: parseo robusto de fechas en metadatos.
+python-dateutil>=2.9
+
+
+# =============================================================================
+# Dependencias de desarrollo
+# =============================================================================
+# pytest: framework de pruebas.
+pytest>=8.3
+# pytest-cov: cobertura de codigo.
+pytest-cov>=5.0
+# ruff: linter y formateador (reemplaza flake8 + black + isort).
+ruff>=0.7
