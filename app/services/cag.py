@@ -151,22 +151,25 @@ class CAGService:
         devuelve la cache solo si su huella coincide con la del corpus
         actual.
         """
-        if not force and self._en_memoria is not None:
-            if self._en_memoria.hash_corpus == self.hash_corpus():
-                inicio_entrega = time.perf_counter()
-                # Se devuelve una COPIA y el original queda intacto en
-                # `_en_memoria`. Devolver el mismo objeto permitiria que
-                # quien lo lee lo modificara y contaminara la cache para
-                # las consultas siguientes.
-                return replace(
-                    self._en_memoria,
-                    desde_cache=True,
-                    # El tiempo de preparacion original no se arrastra: esta
-                    # entrega fue una lectura de cache, y medir eso es lo que
-                    # distingue una ejecucion caliente de una fria.
-                    preparacion_ms=0.0,
-                    entrega_ms=round((time.perf_counter() - inicio_entrega) * 1000, 3),
-                )
+        if (
+            not force
+            and self._en_memoria is not None
+            and self._en_memoria.hash_corpus == self.hash_corpus()
+        ):
+            inicio_entrega = time.perf_counter()
+            # Se devuelve una COPIA y el original queda intacto en
+            # `_en_memoria`. Devolver el mismo objeto permitiria que
+            # quien lo lee lo modificara y contaminara la cache para
+            # las consultas siguientes.
+            return replace(
+                self._en_memoria,
+                desde_cache=True,
+                # El tiempo de preparacion original no se arrastra: esta
+                # entrega fue una lectura de cache, y medir eso es lo que
+                # distingue una ejecucion caliente de una fria.
+                preparacion_ms=0.0,
+                entrega_ms=round((time.perf_counter() - inicio_entrega) * 1000, 3),
+            )
 
         if not force:
             desde_disco = self._leer_cache()
