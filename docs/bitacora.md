@@ -1,4 +1,4 @@
-# Bitacora de trabajo
+﻿# Bitacora de trabajo
 
 Registro cronologico del proyecto. Cada fase deja constancia de que se hizo,
 que quedo funcionando, que falta y que problemas aparecieron.
@@ -435,4 +435,122 @@ data/manifest.json                 Manifiesto de fuentes (generado)
 
 ## Fase 3 - Proveedor LLM intercambiable y primera respuesta fundamentada
 
-**Estado:** en curso.
+**Estado:** completada y verificada. Commit `525fc00`. 142 pruebas pasan.
+
+### 3.1 La decision de fondo: verificar, no confiar
+
+El enunciado pide dos cosas que parecen incompatibles con "dejale hablar
+al modelo": no citar documentos que no se usaron, y no inventar datos.
+
+La solucion NO es pedirle al modelo que cite. Es lo contrario. Pedirselo
+garantiza que cite documentos que no uso, porque **el mismo criterio que
+genera la cita la validaria**: si el modelo decide que "Solicitud de
+Partidas" respalda su respuesta, y despues se evalua si efectivamente la
+respuesta menciona algo de ese documento, el criterio es el mismo y
+siempre va a coincidir.
+
+Por eso el flujo es:
+
+    contexto -> modelo -> verificacion local -> respuesta
+
+Las **citas las decide el sistema**, comparando la respuesta con el corpus
+que se le entrego. La verificacion local extrae montos, referencias a
+normativa y plazos, y busca cada uno en el texto fuente. Lo que no
+aparece se reporta como advertencia en vez de aceptarse.
+
+### 3.2 Resultado contra el proveedor real (gpt-oss-120b)
+
+Cinco casos ejecutados contra el corpus real de 6 documentos:
+
+| Caso | grounded | Comportamiento |
+|------|----------|----------------|
+| Requisitos de partida | Si | Reproduce lo que dice la fuente, sin inventar |
+| Costos | Si | **3/3 afirmaciones respaldadas**, cita la Ley Impositiva 2024 y menciona la tasa municipal |
+| Plazo de entrega | No | "No tengo informacion suficiente en las fuentes consultadas" |
+| Pasaporte (fuera de alcance) | No | Abstencion |
+| Precio inventado de 50.000 dolares | Si | **Refuto la premisa**: dio el precio real y dijo que no es ese |
+
+El ultimo caso es el mas interesante: el modelo **no acepto** el dato
+inventado de la pregunta, lo contrasto con la fuente y contesto con el
+valor correcto. Ese comportamiento no provino de una instruccion, sino de
+tener la fuente a mano y de la regla de no afirmar lo que no esta.
+
+Medicion adicional en la consulta de costos:
+
+- **cache = 3584 de 3627 tokens (98,8% de acierto)** en la segunda llamada
+- Verificacion local: **3 de 3** afirmaciones con respaldo textual
+
+### 3.3 Hallazgo de infraestructura: el limite real es de tokens
+
+Al aparecer errores 429 con solo unas pocas llamadas, se midieron las
+cabeceras que devuelve el proveedor:
+
+```
+x-ratelimit-limit-requests: 1000      peticiones por dia
+x-ratelimit-limit-tokens:    8000     TOKENS por minuto
+x-ratelimit-reset-tokens:    14.4s
+```
+
+**El limite que aprieta no son las peticiones, son los tokens.** Con un
+contexto de ~3.600 tokens por llamada entran unas **2 llamadas por
+minuto**. Esto cambia la planificacion del experimento:
+
+- El tiempo no lo marcara la inferencia (~1 s por llamada), sino el ritmo
+  permitido por el proveedor.
+- El runner de la Fase 8 tiene que ritmo-pacificar las llamadas.
+- Los **tokens cacheados no cuentan para el limite**, lo que refuerza el
+  caso de CAG: tras la primera llamada su contexto deja de consumir
+  presupuesto. En RAG los fragmentos cambian en cada consulta y no se
+  cachean. Esa asimetria es justamente una de las metricas del
+  experimento.
+
+### 3.4 Problemas encontrados
+
+| # | Problema | Causa | Resolucion |
+|---|----------|-------|------------|
+| 14 | **`LLM_MAX_RETRIES` no hacia nada** | La variable existia en la configuracion desde la Fase 1 pero ningun proveedor la usaba. Una consulta que caia en el limite de uso se perdia, cuando el problema se resuelve solo en unos segundos. | Reintento con la espera que indica el propio proveedor, leyendo `retry-after` y `x-ratelimit-reset-tokens`. Solo se reintenta lo transitorio: un 401 por credencial invalida falla de inmediato. |
+| 15 | **Montos correctos marcados como inventados** | La regex de montos arrastraba el punto final de la oracion: capturaba `$1.100.` en lugar de `$1.100`, que ya no coincidia con el corpus. | Se reescribio para agrupar los miles de a tres en tres. |
+| 16 | **`$50 000` se partia en `$50`** | El modelo escribe montos con espacio fino (notacion francesa). La regex cortaba en el espacio y reportaba `$50` como monto sin respaldo. | La verificacion paso a **comparar por cifra y no por texto**: `_canonico_monto` reduce ambos a `50000`. Es el error mas peligroso posible en esta capa, porque marca como inventado un dato que el ciudadano leeria como correcto. |
+| 17 | **Espacio fino rompia la consola** | Los modelos emiten espacio fino U+202F entre numero y palabra. Es invisible, no se puede imprimir en cp1252 y habria quedado dentro del CSV de resultados. | Se agrego al conjunto de caracteres invisibles de la normalizacion. La salida del modelo ahora pasa por la misma normalizacion que el corpus. |
+| 18 | **La pregunta se colaba como respuesta** | El mensaje del usuario lleva contexto **y** pregunta, pero el proveedor determinista hacia `if/else` sobre el mismo mensaje y conservaba solo uno. Ademas devolvia la pregunta como si fuera texto extraido de la fuente. | Se extraen ambos por separado y se recorta todo lo que sigue al ultimo cierre de contexto. |
+| 19 | **`sqlite3.Row` no admite asignacion** | `obtener_ejecucion` deserializaba los campos JSON mutando la fila directamente. | Se convierte a diccionario antes de deserializar. |
+
+### 3.5 Decisiones de diseno
+
+1. **Un fallo tecnico no es una abstencion.** Si el proveedor falla, la
+   respuesta dice que el problema es tecnico y que no significa que no
+   exista informacion. Colapsar ambos casos en "no tengo informacion"
+   haria que un fallo de red pareciera evidencia ausente.
+2. **Una abstencion no cita fuentes.** Listar fuentes en una abstencion
+   sugeriria que si hay evidencia, que es lo contrario de la verdad.
+3. **`extra="forbid"` en todos los modelos.** Un metadato que el pipeline
+   no contempla debe ser un error explicito, no un campo ignorado en
+   silencio.
+4. **El proveedor `fake` marca sus respuestas como sinteticas.** Ninguna
+   respuesta de prueba puede confundirse con una real.
+5. **La estimacion de tokens nunca se reporta como metrica.** Se usa solo
+   para decidir cuanto contexto entra. El consumo que va al informe sale
+   siempre del proveedor.
+
+### 3.6 Archivos creados
+
+```
+app/services/llm.py                 Interfaz LLMProvider + 3 implementaciones
+app/services/citations.py           Verificacion de afirmaciones y de citas
+app/services/agent.py               Orquestacion y reglas del agente
+app/repositories/
+  evaluation_repository.py          SQLite: consultas, ejecuciones, resultados
+scripts/probar_agente.py            Prueba contra el proveedor real
+tests/test_agent.py                 52 pruebas de agente, citas y metricas
+```
+
+### 3.7 Que falta
+
+- [ ] Endpoints de chat y `/sources` (Fase 6).
+- [ ] Runner con ritmo adaptativo al limite de tokens (Fase 8).
+
+---
+
+## Fase 4 - CAG (Cache-Augmented Generation)
+
+**Estado:** no iniciada.
