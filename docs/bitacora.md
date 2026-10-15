@@ -617,6 +617,28 @@ informar un 99% inventado no lo seria.
 El script `scripts/diagnostico_cache.py` existe para repetir esta
 medicion.
 
+**Medicion posterior que confirma el mecanismo.** Con dos consultas
+seguidas desde la consola:
+
+| Consulta | Tokens entrada | Tokens cacheados | Tasa |
+|----------|---------------|------------------|------|
+| 1 - "Cuanto cuesta la partida?" | 3617 | 512 | 14,2% |
+| 2 - "Que necesito para el tramite?" | 4897 | **3584** | **73,2%** |
+
+La primera llamada crea el prefijo a medias. La segunda lo reutiliza: de
+3617 tokens de entrada pasan a facturarse menos de 1300. Ese es el
+mecanismo de CAG funcionando, y explica por que el orden determinista del
+contexto importa.
+
+La lectura correcta de todas las mediciones es: **el mecanismo funciona,
+pero el proveedor no lo garantiza en cada llamada**, porque depende de caer
+en el backend que tiene el prefijo cacheado.
+
+Implicancia para el experimento: el acierto **crece a lo largo de la
+sesion**, asi que una corrida de 50 preguntas vera mas cacheo al final que
+al principio. Por eso el enunciado pide separar ejecuciones frias y
+calientes, y no promediar todo junto.
+
 ### 4.4 Las dos caches se registran por separado
 
 El enunciado pide no confundir:
@@ -643,6 +665,7 @@ inexistente, que es justo lo que el enunciado prohibe.
 | 22 | **Metrica de preparacion engañosa** | Servir desde cache reportaba el tiempo de la preparacion original (4 ms), no el de la entrega. Comparar una ejecucion fria con una caliente usando ese numero daria una mejora inexistente. | `preparacion_ms` queda en 0 cuando se sirve desde cache, y se agrega `entrega_ms` para medir el coste real de servir. |
 | 23 | **`supports_prompt_caching` inconsistente** | Era metodo **sincrono** en la clase base y **asincrono** en el proveedor real. Habia que esperarlo sin motivo. | Se unifica como sincrono: depende del modelo, no de una consulta. |
 | 24 | **Acierto de cache atribuido a la app** | Una prueba media aislada daba 14,2% y la primera medicion daba 98,8%. Sin investigar, la conclusion habria sido que el contexto estaba mal armado. | Se escribio `diagnostico_cache.py` para probar con SHA del prefijo. Resultado: la variacion es del proveedor. |
+| 25 | **`await` colgando en `comprobar_proveedor`** | Al unificar `supports_prompt_caching` como sincrono (problema 23) quedo un `await` dentro de la funcion que lo invoca. | Se quito el `await`. Se agregaron 5 pruebas de integracion con `MockTransport`, sin red, que habrian detectado esto. |
 
 ### 4.6 Decisiones de diseno
 
