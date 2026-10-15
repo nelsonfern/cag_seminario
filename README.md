@@ -1,4 +1,4 @@
-# TramitaIA — CAG vs. RAG para trámites públicos de La Rioja
+﻿# TramitaIA — CAG vs. RAG para trámites públicos de La Rioja
 
 Agente conversacional que responde consultas sobre trámites públicos de la
 provincia de La Rioja (Argentina) usando **únicamente fuentes oficiales**.
@@ -24,11 +24,11 @@ fuentes.
 | 2 | Ingesta documental, manifiesto de fuentes, corpus real | Completada |
 | 3 | Proveedor de LLM intercambiable, agente con verificación local | Completada |
 | 4 | CAG: contexto preparado, caché e invalidación por hash | Completada |
-| 5 | RAG sobre el mismo corpus | *Pendiente* |
-| 6 | API FastAPI y pruebas de endpoints | *Pendiente* |
-| 7 | Interfaz web | *Pendiente* |
-| 8 | Dataset de 50 preguntas y experimento | *Pendiente* |
-| 9 | Documentación final y guía de exposición | *Pendiente* |
+| 5 | RAG sobre el mismo corpus: troceado, indizado y verificado | Completada |
+| 6 | API FastAPI, endpoints de comparacion y pruebas | Completada |
+| 7 | Interfaz web con comparacion CAG/RAG lado a lado | Completada |
+| 8 | Dataset de 50 preguntas y experimento | En curso |
+| 9 | Documentacion final y guia de exposicion | Pendiente |
 
 El detalle completo de cada fase, con los problemas encontrados y las
 decisiones tomadas, está en **[`docs/bitacora.md`](docs/bitacora.md)**.
@@ -108,6 +108,36 @@ python scripts/probar_cag.py --consultas --ver-respuesta -p "¿Cuánto cuesta la
 # Medir si el prefijo enviado al proveedor es realmente idéntico
 python scripts/diagnostico_cache.py
 ```
+
+## Demos del seminario
+
+Tres scripts que sostienen la conclusion. Los dos primeros **no gastan un
+solo token**: la recuperacion es local.
+
+```bash
+# La palabra que rompe la recuperacion de RAG
+python scripts/demo_recuperacion.py
+
+# El modelo no era el problema: mismo prompt, +679 caracteres
+python scripts/experimento_modelo.py
+
+# Costo real por consulta con los precios publicados de Groq
+python scripts/costo_consulta.py
+```
+
+## Experimento
+
+```bash
+# Las 50 preguntas con las dos estrategias
+python scripts/correr_experimento.py
+
+# Prueba rapida
+python scripts/correr_experimento.py --limite 5
+```
+
+El plan gratuito del proveedor da 8.000 tokens por minuto y cada consulta
+de CAG manda casi 4.000, asi que la corrida completa tarda alrededor de
+media hora. El informe queda en `results/informe-*.json`.
 
 ## API
 
