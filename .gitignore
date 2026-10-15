@@ -1,4 +1,4 @@
-# --- Entorno virtual ---
+﻿# --- Entorno virtual ---
 .venv/
 venv/
 env/
@@ -32,6 +32,9 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+
+# La base SQLite es estado de runtime: se regenera corriendo el agente.
+data/*.db
 
 # --- Resultados de experimentos ---
 # Se regeneran corriendo la evaluación.

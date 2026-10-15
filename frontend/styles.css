@@ -105,6 +105,116 @@ body {
 .estado.ok .punto { background: var(--exito); }
 .estado.error .punto { background: var(--error); }
 
+/* --- Modo de consulta --- */
+.elegir-modo { padding: 1.25rem 0 .25rem; }
+
+.modos { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .6rem; }
+
+.modo {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: .7rem .9rem;
+  cursor: pointer;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  transition: border-color .15s, background .15s;
+}
+
+.modo input { position: absolute; opacity: 0; pointer-events: none; }
+.modo .titulo { font-weight: 600; font-size: .95rem; }
+.modo .descripcion { font-size: .8rem; color: var(--tenue); line-height: 1.4; }
+
+.modo.activa { border-color: var(--primario); background: var(--primario-suave); }
+.modo:focus-within { outline: 2px solid var(--primario); outline-offset: 2px; }
+
+/* --- Chips de ejemplo --- */
+.ejemplos { padding: .75rem 0 0; }
+
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
+
+.chips button {
+  background: var(--panel);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: .3rem .8rem;
+  font-size: .82rem;
+  font-weight: 400;
+}
+
+.chips button:hover { border-color: var(--primario); color: var(--primario); }
+
+/* --- Comparacion lado a lado --- */
+.mensaje.comparacion { gap: .6rem; }
+
+.columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: .75rem;
+  align-items: start;
+}
+
+.panel-agente {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: .75rem .85rem;
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  min-width: 0;
+}
+
+.panel-agente.abstencion { border-style: dashed; border-color: var(--aviso); }
+
+.panel-cabecera {
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--primario);
+}
+
+.lectura {
+  margin: 0;
+  font-size: .85rem;
+  color: var(--tenue);
+  background: var(--fondo);
+  border-radius: var(--radio);
+  padding: .6rem .8rem;
+}
+
+.metricas-mini {
+  font-size: .76rem;
+  color: var(--tenue);
+  border-top: 1px solid var(--borde);
+  padding-top: .45rem;
+}
+
+/* --- Aviso de espera --- */
+.espera {
+  align-self: center;
+  font-size: .85rem;
+  color: var(--tenue);
+  background: var(--panel);
+  border: 1px dashed var(--borde);
+  border-radius: var(--radio);
+  padding: .5rem .9rem;
+  max-width: 34rem;
+  text-align: center;
+}
+
+.nota-limite {
+  margin: .5rem 0 1rem;
+  padding: .6rem .8rem;
+  border-left: 3px solid var(--aviso);
+  background: var(--aviso-fondo);
+  border-radius: 0 var(--radio) var(--radio) 0;
+  font-size: .82rem;
+}
+
 /* --- Selector de estrategia --- */
 .selector {
   display: flex;

@@ -1,11 +1,15 @@
 """Punto de entrada de TramitaIA.
 
-La superficie HTTP completa vive en `app.api.routes`: estado, fuentes,`r`nchat y resultados del experimento. Este modulo solo arma la aplicacion,`r`nconfigura CORS y monta el router.
+La superficie HTTP completa vive en `app.api.routes`: estado, fuentes,
+chat y resultados del experimento. Este modulo solo arma la aplicacion,
+configura CORS, calienta los servicios y monta el frontend.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -22,7 +26,17 @@ logger = logging.getLogger("tramitaia.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Prepara y libera los recursos del ciclo de vida de la aplicacion."""
+    """Prepara y libera los recursos del ciclo de vida de la aplicacion.
+
+    **Calienta CAG y RAG antes de aceptar la primera consulta.** No es
+    una optimizacion: sin esto, la primera consulta paga la carga del
+    modelo de embeddings (unos 30 segundos) y el usuario la lee como
+    "RAG es mas lento". El panel de comparacion mostraria un numero de
+    arranque, no de recuperacion.
+
+    Los proveedores se inicializan en un hilo aparte para que el arranque
+    no bloquee el event loop.
+    """
     configure_logging()
     settings = get_settings()
     settings.ensure_directories()
@@ -32,8 +46,45 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.llm_provider,
         settings.model_name,
     )
+
+    if settings.warmup_on_startup:
+        await asyncio.to_thread(calentar_servicios)
+
     yield
     logger.info("Deteniendo %s", get_settings().app_name)
+
+
+def calentar_servicios() -> None:
+    """Construye el contexto de CAG y el indice de RAG.
+
+    Cada falla se registra y se sigue: que RAG no pueda arrancar no debe
+    impedir que CAG responda. La consulta lo va a avisar.
+    """
+    from app.services.cag import obtener_servicio_cag
+    from app.services.rag import obtener_servicio_rag
+
+    inicio = time.perf_counter()
+
+    try:
+        preparado = obtener_servicio_cag().preparar(force=True)
+        logger.info(
+            "CAG listo: %d documentos, ~%d tokens, %.0f ms",
+            preparado.documentos_incluidos,
+            preparado.tokens_estimados,
+            (time.perf_counter() - inicio) * 1000,
+        )
+    except Exception:
+        logger.warning("No se pudo calentar CAG", exc_info=True)
+
+    try:
+        busqueda = obtener_servicio_rag().recuperar("tramite de la provincia")
+        logger.info(
+            "RAG listo: %d fragmentos, %.0f ms",
+            busqueda.obtenidos,
+            (time.perf_counter() - inicio) * 1000,
+        )
+    except Exception:
+        logger.warning("No se pudo calentar RAG", exc_info=True)
 
 
 DIRECTORIO_FRONTEND = Path(__file__).resolve().parents[1] / "frontend"

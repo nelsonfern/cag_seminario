@@ -325,9 +325,16 @@ class RAGService:
 
         Cargar el modelo cuesta ~67 s en frio. Es el mayor costo unico de
         RAG y no existe en CAG; por eso se mide aparte.
+
+        Con el proveedor `falso` se usan embeddings deterministas sin
+        descargar nada. Las pruebas de la API no deberian pagar 13
+        segundos por prueba solo para recuperar un fragmento.
         """
         if self._embeddings is None:
-            self._embeddings = Embeddings(self.ajustes.embedding_model)
+            if self.ajustes.llm_provider == "fake":
+                self._embeddings = EmbeddingsFalsos()
+            else:
+                self._embeddings = Embeddings(self.ajustes.embedding_model)
         return self._embeddings
 
     @property

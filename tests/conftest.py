@@ -26,6 +26,10 @@ from pathlib import Path
 _FORCED_ENV = {
     "LLM_PROVIDER": "fake",
     "LOG_LEVEL": "WARNING",
+    # Cada prueba construye su propia app. Calentar CAG y RAG en cada
+    # una tardaria 30 segundos y, peor, dejaría el mismo servicio
+    # compartido entre pruebas con resultados que dependen del orden.
+    "WARMUP_ON_STARTUP": "false",
 }
 os.environ.update(_FORCED_ENV)
 
@@ -67,3 +71,30 @@ def limpiar_cache_config() -> Iterator[None]:
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def limpiar_servicios() -> Iterator[None]:
+    """Reinicia los servicios con memoria antes y despues de cada prueba.
+
+    `obtener_servicio_cag` y `obtener_servicio_rag` devuelven un unico
+    objeto por proceso. Sin este reinicio, el contexto de CAG y el indice
+    de RAG que creo una prueba se filtran a la siguiente, y el resultado
+    depende del orden de ejecucion.
+
+    No es un detalle teorico: antes de agregar este fixture, dos pruebas
+    de RAG fallaban de forma intermitente segun si habia corrido antes la
+    suite de la API.
+    """
+    _reiniciar()
+    yield
+    _reiniciar()
+
+
+def _reiniciar() -> None:
+    from app.services.cag import reiniciar_servicio_cag
+    from app.services.rag import reiniciar_servicio_rag
+
+    # Se importan adentro para no arrastrar los servicios al collection.
+    reiniciar_servicio_cag()
+    reiniciar_servicio_rag()

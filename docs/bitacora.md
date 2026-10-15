@@ -1024,6 +1024,223 @@ mal configurado puede terminar exponiendo la clave de API.
 
 ---
 
+---
+
+## Correccion de Fase 7 y hallazgo central del proyecto
+
+**Estado:** la interfaz se corrigio y aparecio el resultado mas importante
+del trabajo. 270 pruebas pasan.
+
+### 7.4 Que reportaba el usuario y por que no era un bug del agente
+
+El usuario reporto tres cosas: consultas que devuelven abstenciones aunque
+la respuesta este en el corpus, un selector CAG/RAG que no se entiende, y
+que no habia donde comparar los dos.
+
+**La primera NO era un bug del agente.** Se reprodujo por el camino
+directo y CAG contestaba bien: el costo de la copia certificada, los
+datos del acta, los requisitos. Se abstenia solo en los plazos, que
+efectivamente no estan en el corpus.
+
+Al reproducir por la API aparecio la causa real en el log:
+
+```
+Reintento 1/2; esperando 25.0s por limite del proveedor
+Reintento 1/2; esperando 29.0s por limite del proveedor
+```
+
+**Cada consulta estaba pegando el limite de 8.000 tokens por minuto.**
+CAG manda 3.952 tokens por llamada, asi que entran unas dos por minuto y
+la tercera espera. Las respuestas tardaban 27 a 31 segundos en vez de 2.
+
+Eso explica las dos cosas juntas:
+
+- La lentitud era el limite del proveedor, no el agente.
+- Las respuestas degradadas salian despues de un reintento, con
+  menos margen para verificar la evidencia.
+
+Lo que **si** era un problema real: la interfaz no mostraba la espera.
+El usuario veia un spinner sin explicacion, y el unico sintoma visible era
+una respuesta poorer de lo normal.
+
+### 7.5 Lo que se cambio en la interfaz
+
+1. **Modo "comparar" por defecto.** La misma pregunta va a CAG y a RAG y
+   las dos respuestas aparecen lado a lado. Es la forma de verlas, y era
+   lo que el usuario pedia.
+
+2. **Modo "simple"** para cuando solo se quiere una respuesta: consume la
+   mitad de tokens y responde antes.
+
+3. **El selector quedo opcional**, porque en modo comparar no hace falta
+   elegir. Antes era obligatorio y no aportaba nada.
+
+4. **Aviso visible cuando el proveedor limita el ritmo**, con una
+   explicacion de por que y de cuanto es el tope.
+
+5. **Cada panel muestra sus propias metricas**: latencia, tokens de
+   entrada, acierto de cache, y cuantos documentos o fragmentos mando.
+
+6. **Una frase de lectura debajo de la comparacion.** Una tabla con
+   numeros sin leer no dice nada: el panel dice si CAG o RAG respondieron
+   mas rapido en esa consulta concreta.
+
+### 7.6 El error mas importante: estaba mostrando tiempos de arranque
+
+La primera comparacion real dio esto:
+
+| | Latencia | Tokens entrada | Acierto cache |
+|---|---|---|---|
+| CAG | 2.358 ms | 3.952 | 97,2% |
+| RAG | 30.706 ms | 1.446 | 35,4% |
+
+Con la lectura rapida, **RAG es 28 segundos mas lento**. Eso es falso.
+
+El campo `estrategia_datos` decia:
+
+```
+recuperacion_ms: 29489.0
+indice_reconstruido: true
+```
+
+RAG estaba **cargando el modelo de embeddings** en la primera consulta.
+Eran 29 segundos de arranque, no de recuperacion.
+
+Presentar eso como "RAG es mas lento" en el panel que existe justamente
+para comparar seria mentir con datos reales. Asi que se corrigio en tres
+lugares:
+
+- **El lifespan calienta CAG y RAG** antes de aceptar la primera consulta.
+- **`/chat/compare` marca `arranque_en_frio`** cuando RAG reconstruyo el
+  indice, y lo dice en una nota.
+- **El frontend no compara tiempos** cuando hay arranque en frio: dice
+  que los dos tiempos todavia no son comparables.
+
+Con los servicios calientes, los numeros son otros:
+
+| Consulta | CAG | RAG |
+|---|---|---|
+| Costo de la copia | 1.599 ms | 1.624 ms |
+| Documentacion para un nacimiento | 1.308 ms | 1.069 ms |
+
+**Empate.** Con este corpus y con la cache caliente, CAG y RAG tardan lo
+mismo. La afirmacion "CAG es mas rapido" no se sostiene con estos numeros.
+
+### 7.7 Hallazgo central: RAG pierde informacion que CAG conserva
+
+Con la latencia empatada, la comparacion se pone interesante en otro lado:
+la **calidad**.
+
+RAG se abstuvo en la segunda consulta. CAG no. Se investigo por que, y la
+causa es una sola palabra.
+
+El corpus **si tiene** la respuesta. En `nacimientos`, seccion
+"Documentacion requerida":
+
+```
+*Certificado medico de nacimiento original con sello del profesional
+firmante o certificado de nacido vivo expedido por el hospital o la
+clinica.
+*Documento de identidad de ambos progenitores.
+```
+
+El fragmento esta bien cortado (634 caracteres) y bien indexado. El
+problema es que **no entra en el corte**:
+
+| Consulta | Posicion del fragmento correcto | Entra al top-5? | RAG |
+|---|---|---|---|
+| "...para una **partida** de nacimiento?" | 8 | **No** | se abstiene |
+| "...para **inscribir un nacimiento**?" | 5 | **Si** | contesta |
+
+Lo unico que cambia es una palabra. Esa palabra mueve el fragmento
+correcto del puesto 5 al puesto 8, y el sistema pasa de responder a
+abstenerse.
+
+**Lo que esto demuestra:**
+
+- La informacion **no se perdio**: estaba en el corpus y en el indice.
+- Lo que se perdio fue la **posibilidad de recuperarla**.
+- La abstencion del modelo **no es un error suyo**: es el sintoma de que
+  el recuperador no entrego la evidencia. El modelo hizo lo correcto.
+
+Y del lado de CAG: contesta las dos consultas, porque no recupera nada.
+Entrega el corpus entero y no puede dejar pasar un dato por no haberlo
+buscado.
+
+**Por que importa para el seminario:** la comparacion no es de velocidad,
+es de confiabilidad. La tesis de CAG no es que sea mas rapido, sino que
+**con un corpus chico y estable, no pierde informacion**. RAG gana en
+tokens (1.446 contra 3.952) y pierde en cobertura.
+
+### 7.8 La demo para la exposicion
+
+`scripts/demo_recuperacion.py` muestra exactamente lo anterior.
+
+- **No llama al proveedor de lenguaje.** La recuperacion es local, asi que
+  la demo no gasta un solo token y se puede repetir cuantas veces haga
+  falta sin esperar el limite de 8.000 por minuto.
+- Muestra las dos consultas, la posicion del fragmento en cada una, y si
+  llega al corte.
+- Tarda unos 30 segundos la primera vez por cargar el modelo de
+  embeddings. **Hay que lanzarla antes de empezar a exponer**: en una
+  demo en vivo ese tiempo muerto no se recupera.
+
+### 7.9 Otros problemas encontrados
+
+| # | Problema | Causa | Resolucion |
+|---|----------|-------|------------|
+| 40 | **El panel comparaba un tiempo de arranque como si fuera de recuperacion** | RAG reconstruia el indice en la primera consulta y se contaban los 29 segundos de carga del modelo de embeddings como latencia de RAG. | El lifespan calienta los servicios y el panel marca `arranque_en_frio` sin comparar tiempos. Es el problema mas grave de esta tanda: sin esto, el numero del seminario habria sido falso. |
+| 41 | **La base SQLite estaba versionada** | Se commiteo cuando se creo el repositorio, sin revisar el `.gitignore`. | `git rm --cached` y `data/*.db` agregado al `.gitignore`. Es estado de runtime, no fuente. |
+| 42 | **`occupation()` en un codigo escrito en español** | Nombre en ingles que se coló al escribir el cliente. | Renombrado a `ocupar()`. |
+| 43 | **Docstring de `main.py` con un `` `r`n `` literal** | Una sustitucion con PowerShell metio los caracteres de escape dentro del texto. | Corregido. Vale la pena notar que las sustituciones por shell sobre archivos con acentos fallan de forma silenciosa. |
+| 44 | **Pruebas intermitentes: el resultado dependia del orden** | `obtener_servicio_cag` y `obtener_servicio_rag` devuelven un unico objeto por proceso, y ningun fixture los reiniciaba. El contexto de CAG y el indice de RAG que creaba una prueba se filtraban a la siguiente. | Fixture `limpiar_servicios` de uso automatico que los reinicia antes y despues de cada prueba. Verificado con tres corridas consecutivas y con el orden invertido: las 264 pasan siempre. |
+| 45 | **La suite tardaba 123 s en vez de 20** | Las pruebas de API usaban el modelo real de embeddings: 13 s por prueba solo para recuperar un fragmento. | Con el proveedor `falso` ahora se usan embeddings deterministas. La suite paso de 123 s a 20 s. |
+| 46 | **El calentamiento del arranque corria tambien en las pruebas** | El `lifespan` calienta CAG y RAG, y cada prueba construye su propia app. | Se agrego `warmup_on_startup`, que las pruebas desactivan. El calentamiento es una necesidad de produccion, no de prueba. |
+
+### 7.10 Sobre las pruebas intermitentes
+
+Las pruebas de RAG fallaban de forma intermitente: pasaban solas y
+fallaban dentro de la suite. La causa no era RAG sino el estado compartido
+entre pruebas, y conviene dejarla escrita porque es un error facil de
+repetir en cualquier proyecto con singletons.
+
+Lo que lo hacia dificil de ver:
+
+- El fallo dependia del **orden**: si antes corriera la suite de la API, el
+  servicio de RAG ya tenia un indice abierto y la prueba recibia otro.
+- El mensaje de error no apuntaba al estado compartido: senalaba una
+  puntuacion de relevancia que no cuadraba, que parece un problema de
+  embeddings y no de aislamiento.
+- Una sola prueba de RAG tardaba 13 segundos, lo cual se lee como "el
+  modelo es lento" y no como "cada prueba esta pagando una carga que no
+  le corresponde".
+
+Una vez visto el patron —"pasa sola, falla en la suite" — el siguiente
+paso es buscar estado global, no reintentar el test.
+
+### 7.11 Lo que el proyecto puede afirmar y lo que no
+
+**Puede afirmar:**
+
+- Con este corpus, CAG y RAG responden en el mismo orden de magnitud
+  cuando la cache del proveedor esta caliente.
+- RAG usa alrededor de un tercio de los tokens de entrada de CAG.
+- RAG puede dejar de responder una consulta cuya respuesta esta en el
+  corpus, y hay una demo reproducible de eso.
+- El corpus tiene una contradiccion real y verificable: la pagina dice
+  "actualizada 20/10/2025" pero los precios vienen de la Ley Impositiva
+  2024, y la propia fuente advierte que la Municipalidad puede fijar su
+  propia tasa.
+
+**No puede afirmar:**
+
+- Que CAG es mas rapido. Con la cache caliente, los numeros dan empate.
+- Que CAG siempre gana. El corpus tiene 6 documentos; con cientos, el
+  costo de mandarlos todos crece y la comparacion cambia.
+- Cualquier numero de esta seccion como resultado del experimento. Son
+  observaciones de diagnostic, no la corrida de 50 preguntas.
+
+---
 ## Estado del proyecto
 
 | Fase | Estado |
@@ -1034,18 +1251,25 @@ mal configurado puede terminar exponiendo la clave de API.
 | 4 - CAG | Completada |
 | 5 - RAG | Completada |
 | 6 - API | Completada |
-| 7 - Interfaz web | Completada |
+| 7 - Interfaz web | Completada y corregida |
 | 8 - Experimento | **Pendiente** |
-| 9 - Documentación final | **Pendiente** |
+| 9 - Documentacion final | **Pendiente** |
 
-**258 pruebas pasan**, lint limpio.
+**270 pruebas pasan**, lint limpio.
+
+### Hallazgo central del proyecto
+
+Con la cache caliente, CAG y RAG responden en el mismo orden de magnitud.
+La diferencia real no es de velocidad sino de confiabilidad: RAG puede no
+recuperar un fragmento que tiene la respuesta, y hay una demo
+reproducible en scripts/demo_recuperacion.py que no gasta tokens.
 
 ### Lo que falta para cerrar
 
-1. **Completar el dataset** con las categorías de ambigua y fuera de corpus.
-   Sin ellas no hay métrica de abstención, que es la más importante.
-2. **Ejecutar el experimento** de 50 preguntas × 2 estrategias.
-3. **Guía de exposición** y lectura de los resultados.
+1. **Completar el dataset** con las categorias de ambigua y fuera de corpus.
+   Sin ellas no hay metrica de abstencion, que es la mas importante.
+2. **Ejecutar el experimento** de 50 preguntas x 2 estrategias.
+3. **Guia de exposicion** y lectura de los resultados.
 
 ---
 

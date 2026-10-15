@@ -116,6 +116,12 @@ class Settings(BaseSettings):
     chroma_dir: Path = Path("data/processed/chroma")
     faiss_index_path: Path = Path("data/processed/faiss/index.faiss")
 
+    #: Prepara CAG y RAG al arrancar el servidor. Apagarlo tiene sentido
+    #: en las pruebas: cada una construye su propia app, y reconstruir el
+    #: indice vectorial en cada una tardaria 30 segundos y dejaría estado
+    #: compartido entre ellas.
+    warmup_on_startup: bool = True
+
     # -------------------------------------------------------------------------
     # Ingesta documental
     # -------------------------------------------------------------------------

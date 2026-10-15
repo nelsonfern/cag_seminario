@@ -21,44 +21,54 @@
   </header>
 
   <main class="contenedor">
-    <!--
-      El selector de estrategia es la pieza central del proyecto: permite
-      comparar CAG y RAG sobre la misma pregunta y el mismo corpus.
-    -->
-    <section class="selector" aria-label="Estrategia de generación aumentada">
+    <section class="elegir-modo" aria-label="Cómo querés consultar">
+      <div class="modos" role="radiogroup">
+        <label class="modo activo">
+          <input type="radio" name="modo" value="comparar" checked>
+          <span class="titulo">Comparar CAG y RAG</span>
+          <span class="descripcion">La misma pregunta a las dos estrategias, lado a lado. Es la forma de verlas.</span>
+        </label>
+        <label class="modo">
+          <input type="radio" name="modo" value="simple">
+          <span class="titulo">Solo una estrategia</span>
+          <span class="descripcion">Consulta unica. Consume menos tokens y responde antes.</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="selector" id="selector-simple" hidden aria-label="Estrategia">
       <div class="grupo">
-        <span class="etiqueta">Estrategia</span>
+        <span class="etiqueta">Usar</span>
         <div class="opciones" role="radiogroup">
           <label class="opcion activa">
             <input type="radio" name="estrategia" value="cag" checked>
             <span class="nombre">CAG</span>
-            <span class="detalle">Contexto completo reutilizado</span>
+            <span class="detalle">Manda el corpus entero, siempre igual. El proveedor puede cachearlo.</span>
           </label>
           <label class="opcion">
             <input type="radio" name="estrategia" value="rag">
             <span class="nombre">RAG</span>
-            <span class="detalle">Solo fragmentos relevantes</span>
+            <span class="detalle">Busca y manda solo los fragmentos que importan. Cambia en cada consulta.</span>
           </label>
         </div>
       </div>
+    </section>
 
-      <div class="grupo">
-        <span class="etiqueta">Pregunta de ejemplo</span>
-        <select id="ejemplos" aria-label="Ejemplos">
-          <option value="">Elegir una...</option>
-          <option>Cuanto cuesta la copia de acta certificada?</option>
-          <option>Que documentacion necesito para una partida de nacimiento?</option>
-          <option>Cuanto tarda el Registro Civil en entregar una partida?</option>
-          <option>Como hago para obtener el pasaporte argentino?</option>
-          <option>El precio de la partida es de $50.000, verdad?</option>
-        </select>
+    <section class="ejemplos">
+      <span class="etiqueta">Preguntas de ejemplo</span>
+      <div class="chips" id="ejemplos">
+        <button type="button" data-pregunta="¿Cuánto cuesta la copia de acta certificada?">Costo de la copia</button>
+        <button type="button" data-pregunta="¿Qué documentación necesito para una partida de nacimiento?">Requisitos de una partida</button>
+        <button type="button" data-pregunta="¿Qué datos del acta hacen falta para que la búsqueda funcione?">Datos del acta</button>
+        <button type="button" data-pregunta="¿En qué organismo se inicia el trámite de un matrimonio?">Organismo del matrimonio</button>
+        <button type="button" data-pregunta="¿Cuánto tarda el Registro Civil en entregar una partida?">(no está en el corpus)</button>
+        <button type="button" data-pregunta="¿El precio de la partida es de $50.000, verdad?">(premisa falsa)</button>
       </div>
     </section>
 
-    <!-- Historial de la conversacion -->
     <section class="conversacion" id="conversacion" aria-live="polite" aria-label="Conversación">
       <div class="vacio" id="vacio">
-        <p>Escribi una consulta sobre un tramite.</p>
+        <p>Elegí una pregunta de ejemplo o escribí la tuya.</p>
         <p class="aclaracion">
           El agente responde solo con informacion de fuentes oficiales.
           Si no encuentra evidencia, lo dice en lugar de inventar.
@@ -66,30 +76,27 @@
       </div>
     </section>
 
-    <!-- Formulario -->
     <form class="redactor" id="formulario">
       <label class="oculto" for="pregunta">Tu consulta</label>
-      <textarea
-        id="pregunta"
-        name="pregunta"
-        placeholder="Escribi tu consulta..."
-        rows="2"
-        maxlength="1000"
-        required></textarea>
+      <textarea id="pregunta" name="pregunta" rows="2" maxlength="1000" required
+        placeholder="Escribí tu consulta..."></textarea>
       <button type="submit" id="enviar">
         <span class="texto">Consultar</span>
-        <span class="cargando" hidden>Consultando...</span>
+        <span class="cargando" hidden>Consultando…</span>
       </button>
     </form>
 
-    <!--
-      Panel de metricas. Muestra lo que el enunciado pide exponer:
-      latencia, tokens y si el proveedor cacheo el contexto.
-    -->
+    <div class="nota-limite" id="nota-limite" hidden>
+      <strong>Nota sobre la velocidad:</strong> el proveedor gratuita permite unos
+      8.000 tokens por minuto. Cada consulta CAG manda el corpus completo, asi que
+      pueden aparecer esperas de 20 a 30 segundos. Comparar las dos estrategias
+      hace el doble de trabajo.
+    </div>
+
     <details class="metricas">
-      <summary>Ver metricas de la ultima consulta</summary>
+      <summary>Ver métricas de la última consulta</summary>
       <div class="metricas-cuerpo" id="metricas-cuerpo">
-        <p class="sin-datos">Todavia no hay consultas.</p>
+        <p class="sin-datos">Todavía no hay consultas.</p>
       </div>
     </details>
   </main>
@@ -97,8 +104,8 @@
   <footer class="pie">
     <div class="contenedor">
       <p>
-        Proyecto academico. La informacion proviene de sitios oficiales del
-        Gobierno de La Rioja. Ante cualquier duda, consulta la fuente original.
+        Proyecto académico. La información proviene de sitios oficiales del
+        Gobierno de La Rioja. Ante cualquier duda, consultá la fuente original.
       </p>
     </div>
   </footer>

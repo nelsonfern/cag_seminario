@@ -61,6 +61,125 @@ class PeticionChat(BaseModel):
         return limpio
 
 
+class ComparacionRespuesta(BaseModel):
+    """Resultado de correr la misma pregunta con las dos estrategias.
+
+    Es la pieza que hace visible la comparacion: mismo corpus, mismo
+    modelo, misma pregunta, distinta estrategia.
+    """
+
+    question: str
+    cag: RespuestaChat
+    rag: RespuestaChat
+    diferencias: dict[str, Any]
+
+
+@router.post(
+    "/chat/compare",
+    tags=["agente"],
+    summary="Compara CAG y RAG sobre la misma pregunta",
+)
+async def comparar(peticion: PeticionChat) -> ComparacionRespuesta:
+    """Corre la misma pregunta con CAG y con RAG y devuelve ambas.
+
+    **Advertencia de costo**: cada estrategia consume tokens de entrada
+    completos. Con el plan gratuito de 8000 tokens por minuto, las dos
+    juntas pueden agotar el presupuesto y obligar a esperar al
+    proveedor. El aviso viaja en la respuesta para que el cliente lo muestre.
+    """
+    agente = _agente()
+
+    respuestas = {}
+    for estrategia in (Estrategia.CAG, Estrategia.RAG):
+        r = await agente.responder(peticion.question, estrategia)
+        if (r.datos_estructurados or {}).get("error_proveedor"):
+            raise HTTPException(
+                status_code=502,
+                detail=redact(r.warnings[0] if r.warnings else "Error del proveedor"),
+            )
+        respuestas[estrategia] = _a_respuesta_chat(r)
+
+    return ComparacionRespuesta(
+        question=peticion.question,
+        cag=respuestas[Estrategia.CAG],
+        rag=respuestas[Estrategia.RAG],
+        diferencias=_comparar(respuestas[Estrategia.CAG], respuestas[Estrategia.RAG]),
+    )
+
+
+def _comparar(cag: RespuestaChat, rag: RespuestaChat) -> dict[str, Any]:
+    """Resume, en pocas cifras, en que se diferenciaron las dos respuestas."""
+
+    def valor(chat: RespuestaChat, campo: str) -> Any:
+        uso = chat.token_usage
+        if not uso:
+            return None
+        return getattr(uso, campo, None)
+
+    tokens_cag = valor(cag, "tokens_entrada")
+    tokens_rag = valor(rag, "tokens_entrada")
+
+    # Si RAG reconstruyo el indice, su latencia incluye cargar el modelo
+    # de embeddings. Eso no es caracteristica de la recuperacion.
+    rag_frio = bool((rag.estrategia_datos or {}).get("indice_reconstruido"))
+
+    return {
+        "latencia_cag_ms": cag.latency_ms,
+        "latencia_rag_ms": rag.latency_ms,
+        "diferencia_latencia_ms": round(rag.latency_ms - cag.latency_ms, 1),
+        "tokens_cag": tokens_cag,
+        "tokens_rag": tokens_rag,
+        "tokens_rag_menos_que_cag": (
+            round(tokens_cag - tokens_rag, 1) if tokens_cag and tokens_rag else None
+        ),
+        "cache_cag": valor(cag, "tokens_cache_lectura"),
+        "cache_rag": valor(rag, "tokens_cache_lectura"),
+        "cache_reportada_cag": bool(cag.token_usage and cag.token_usage.cache_disponible),
+        "cache_reportada_rag": bool(rag.token_usage and rag.token_usage.cache_disponible),
+        "grounded_cag": cag.grounded,
+        "grounded_rag": rag.grounded,
+        "mismo_resultado": cag.grounded == rag.grounded,
+        # Un valor None significa "el proveedor no lo informo", no cero.
+        "acierto_cache_cag_pct": _acierto_cache(cag),
+        "acierto_cache_rag_pct": _acierto_cache(rag),
+        "arranque_en_frio": rag_frio,
+        "notas": _notas_de_comparacion(cag, rag, rag_frio),
+    }
+
+
+def _notas_de_comparacion(cag: RespuestaChat, rag: RespuestaChat, rag_frio: bool) -> list[str]:
+    """Explicita cuando un numero no es comparable con el otro.
+
+    Mostrar la latencia de RAG con la carga del modelo de embeddings ya
+    incluida haria creer que RAG es mas lento por su diseno, cuando es un
+    costo de una sola vez por proceso.
+    """
+    notas: list[str] = []
+
+    if rag_frio:
+        notas.append(
+            "La consulta de RAG reconstruyo el indice vectorial y cargo el "
+            "modelo de embeddings: eso sumo a su tiempo y no es una "
+            "caracteristica de la recuperacion. La siguiente consulta de "
+            "RAG no lo vuelve a pagar."
+        )
+
+    if (cag.estrategia_datos or {}).get("truncado"):
+        notas.append(
+            "El contexto de CAG fue truncado para no exceder el limite de "
+            "tokens: parte del corpus no llego al modelo."
+        )
+
+    return notas
+
+
+def _acierto_cache(chat: RespuestaChat) -> float | None:
+    uso = chat.token_usage
+    if not uso or not uso.cache_disponible or not uso.tokens_entrada:
+        return None
+    return round(100 * (uso.tokens_cache_lectura or 0) / uso.tokens_entrada, 1)
+
+
 class FuenteRespuesta(BaseModel):
     """Fuente usada en una respuesta.
 
