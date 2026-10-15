@@ -847,6 +847,46 @@ embeddings tarda 30-67 segundos en frio**. Ocurre una sola vez por proceso,
 pero es la razon por la que el experimento tiene que separar ejecuciones
 frias de calientes y no promediar todo junto.
 
+
+### 5.10 Primera comparacion A/B (CAG vs RAG) con el mismo modelo
+
+No se podia afirmar cual era mas rapido sin medirlo: los numeros de CAG y
+de RAG venian de sesiones distintas. Se escribio `scripts/comparar_cag_rag.py`,
+que corre las mismas preguntas en el mismo orden, con el mismo modelo, y
+verifica que ambos hashes de corpus coincidan antes de comparar.
+
+Resultado con 3 preguntas, corpus intacto:
+
+| | CAG | RAG |
+|---|---|---|
+| Latencia mediana | 1.764 ms | **1.160 ms** |
+| Tokens de entrada (mediana) | 3.718 | **1.340** |
+| Tokens de entrada (total) | 11.153 | **4.199** |
+| Acierto de cache promedio | n/d | 38,4% |
+| Veces que reporto cache | **0 de 3** | 1 de 3 |
+| Tiempo de recuperar | no aplica | 78 ms |
+| Preparacion en frio | 12 ms | **28,9 s** |
+
+**Con este corpus, RAG gana en latencia y en tokens.** Pero el resultado
+esta condicionado por una cosa: **CAG no|reporto cache en ninguna de las
+tres llamadas**, porque la cache del proveedor estaba fria. Sin cache, CAG
+paga los 3.718 tokens completos cada vez; con cache, pagaria alrededor de
+1.300, muy cerca de RAG.
+
+O sea que la afirmacion honesta es:
+
+- Con cache caliente, la diferencia de latencia **se estrecha mucho** y la
+  de tokens **casi desaparece**.
+- La ventaja estructural de RAG (contexto acotado) se hace notar cuando el
+  corpus crece, no con 6 documentos.
+- La ventaja estructural de CAG (no recuperar nada) se paga con 28,9 s de
+  preparacion en frio, pero es un costo de una sola vez por proceso.
+
+**Ningun resultado de esta tabla debe presentarse como definitivo.** Es una
+primera medicion con 3 preguntas, no las 50 del experimento. Sirve para
+orientar, no para concluir.
+
+---
 ### 5.7 Archivos creados
 
 ```
