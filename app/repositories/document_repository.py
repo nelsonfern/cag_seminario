@@ -141,6 +141,20 @@ class DocumentoRepository:
         manifiesto.guardar(self.ruta_manifiesto)
         return metadatos
 
+    def limpiar(self) -> int:
+        """Borra el corpus y devuelve cuantos documentos habia.
+
+        Sin esto, quitar un archivo de `data/raw/` no lo saca del corpus:
+        `guardar_documento` agrega y reemplaza, pero nunca borra. Con el
+        tiempo el corpus deriva de las fuentes reales y deja de ser
+        reproducible desde `data/raw/`.
+        """
+        if not self.ruta_corpus.exists():
+            return 0
+        anterior = len(self._cargar_crudo()["documentos"])
+        self.ruta_corpus.unlink()
+        return anterior
+
     # -----------------------------------------------------------------
     # Lectura
     # -----------------------------------------------------------------

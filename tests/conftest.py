@@ -39,9 +39,9 @@ def settings_de_prueba(tmp_path: Path) -> Settings:
     """Configuracion aislada, con todo lo escribible en un directorio temporal."""
     return Settings(
         sqlite_path=tmp_path / "test.db",
-        raw_dir=tmp_path / "raw",
-        processed_dir=tmp_path / "processed",
-        results_dir=tmp_path / "results",
+        raw_path=tmp_path / "raw",
+        processed_path=tmp_path / "processed",
+        results_path=tmp_path / "results",
         cag_cache_dir=tmp_path / "cag_cache",
         chroma_dir=tmp_path / "chroma",
         llm_provider="fake",

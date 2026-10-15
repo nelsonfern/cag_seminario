@@ -62,7 +62,7 @@ def servicio(repo: DocumentoRepository, tmp_path: Path) -> CAGService:
         _env_file=None,
         llm_provider="fake",
         sqlite_path=tmp_path / "t.db",
-        processed_dir=repo.directorio,
+        processed_path=repo.directorio,
         cag_cache_dir=tmp_path / "cag_cache",
         cag_max_context_tokens=2000,
     )
@@ -131,7 +131,7 @@ class TestPresupuesto:
         ajustes = Settings(
             _env_file=None,
             llm_provider="fake",
-            processed_dir=repo.directorio,
+            processed_path=repo.directorio,
             cag_cache_dir=tmp_path / "c",
             cag_max_context_tokens=120,
         )
@@ -146,7 +146,7 @@ class TestPresupuesto:
         ajustes = Settings(
             _env_file=None,
             llm_provider="fake",
-            processed_dir=repo.directorio,
+            processed_path=repo.directorio,
             cag_cache_dir=tmp_path / "c",
             cag_max_context_tokens=120,
         )
@@ -160,7 +160,7 @@ class TestPresupuesto:
         ajustes = Settings(
             _env_file=None,
             llm_provider="fake",
-            processed_dir=repo.directorio,
+            processed_path=repo.directorio,
             cag_cache_dir=tmp_path / "c",
             cag_max_context_tokens=60,
         )
@@ -322,7 +322,7 @@ class TestCasosLimite:
         ajustes = Settings(
             _env_file=None,
             llm_provider="fake",
-            processed_dir=vacio.directorio,
+            processed_path=vacio.directorio,
             cag_cache_dir=tmp_path / "c",
         )
         servicio = CAGService(repositorio=vacio, ajustes=ajustes)

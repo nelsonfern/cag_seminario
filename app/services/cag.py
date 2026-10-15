@@ -125,12 +125,18 @@ class CAGService:
         cada documento, no su texto completo: cambiar una palabra en un
         documento de 20 KB tiene que notarse, y no tiene por qué depender
         del resto del archivo.
+
+        **No incluye la version del formato de contexto** a proposito: el
+        hash describe el corpus, no como se proceso. Asi coincide con
+        `RAGService.hash_corpus()`, y que los dos den el mismo valor es la
+        garantia de que la comparacion se hizo sobre el mismo material. La
+        version del formato se guarda aparte en el archivo de cache.
         """
         documentos = sorted(self.repositorio.cargar_documentos(), key=lambda d: d.document_id)
         if not documentos:
             return "corpus-vacio"
 
-        partes = [f"v{VERSION_CONTEXTO}"]
+        partes = []
         for documento in documentos:
             if documento.estado_verificacion.value == "no_accesible":
                 continue

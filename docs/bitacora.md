@@ -746,4 +746,137 @@ python scripts\probar_cag.py --consultas
 
 ## Fase 5 - RAG (Retrieval-Augmented Generation)
 
+**Estado:** completada y verificada. 214 pruebas pasan (36 nuevas).
+
+### 5.1 Que hace RAG en este proyecto
+
+Parte el corpus en fragmentos, los indexa con embeddings y recupera solo
+los relevantes para cada consulta. Carga los **mismos documentos** que usa
+CAG, del mismo repositorio, lo que hace valida la comparacion.
+
+Medido sobre el corpus real (6 documentos, 41 fragmentos):
+
+| | |
+|---|---|
+| Fragmentos generados | 41 (de 6 documentos, ~6 por documento) |
+| Secciones atribuidas | Correctas: "Costo", "Requisitos del Tramite", etc. |
+| Construccion del indice | 30,3 s en frio (incluye cargar el modelo de embeddings) |
+| Recuperacion | 44-65 ms por consulta |
+
+### 5.2 El resultado central: el trade-off CAG vs RAG
+
+Medido con la misma pregunta y el mismo modelo:
+
+| | CAG | RAG |
+|---|---|---|
+| Tokens de entrada | 3.617 | **1.331** |
+| Acierto de cache | **73,2%** | **0%** |
+| Costo de recuperar | 0 ms | **47 ms** |
+
+La lectura honesta:
+
+- **RAG manda 2,7 veces menos contexto.** Es su ventaja clara y es real.
+- **RAG no puede cachear nada**, porque el contexto cambia en cada consulta.
+  No es un defecto de implementacion: es estructural. Ninguna cantidad de
+  ingenieria lo arregla, porque el prefijo no se repite.
+- **RAG paga 47 ms de recuperacion** que CAG no paga.
+
+Ese es el corazon del resultado del seminario, y ya esta medido con
+ejecuciones reales, no estimado.
+
+La respuesta con RAG fue correcta y fundamentada: "$1.100, segun la
+informacion consultada", con 2 citas y grounded=True.
+
+### 5.3 Las secciones se usan, no se adivinan
+
+La primera version del fragmentado buscaba encabezados con una heuristica
+("lineas cortas"). No encontro ninguno: **0 secciones detectadas** en los 6
+documentos, y los fragmentos salieron cortados por tamano, sin atribucion.
+
+El problema es que la Fase 2 **ya habia extraido los encabezados reales**
+del HTML (h1, h2, h3) y los habia guardado. Los estaba desperdiciando.
+Con ellos: **41 fragmentos con 6 secciones correctamente atribuidas** en
+vez de 17 sin ninguna.
+
+Moraleja: cuando un dato ya se extrajo, usarlo es mejor que inferirlo.
+
+### 5.4 Problemas encontrados
+
+| # | Problema | Causa | Resolucion |
+|---|----------|-------|------------|
+| 28 | **El hash del corpus no coincidia con el de CAG** | La huella de RAG includia un prefijo de version propio, asi que los dos servicios daban hashes distintos. La comparacion de corporos era imposible. | Se saco la version del formato de la huella en ambos servicios y se guardo aparte, en el archivo de cache. Ahora **coinciden**, lo que es la garantia de que la comparacion usa el mismo material. |
+| 29 | **0 secciones detectadas en el fragmentado** | Heuristica based en lineas cortas que no existia en el texto ya normalizado. | Se usan los encabezados que la ingesta ya habia extraido del HTML. 17 -> 41 fragmentos, todos con seccion. |
+| 30 | **`Settings(processed_dir=...)` se ignoraba en silencio** | `data_dir`, `raw_dir`, `processed_dir` y `results_dir` estaban declarados como **propiedades** que devuelvian siempre la ruta fija del proyecto. Pydantic aceptaba el argumento y lo descartaba. | Se convirtieron en campos configurables (`data_path`, `raw_path`, `processed_path`, `results_path`) que las propiedades resuelven con `resolve_path()`. **Esto contaminaba el corpus real con datos de prueba.** |
+| 31 | **El corpus nunca se limpiaba** | `guardar_documento` agrega y reemplaza, pero nunca borra. Quitar un archivo de `data/raw/` no lo sacaba del corpus. | Se agrego `DocumentoRepository.limpiar()` y el flag `--limpiar` en `fetch_sources.py`. El corpus se reconstruye desde cero. |
+| 32 | **`@dataclass` duplicado** | Un reemplazo por rango de lineas duplico el decorador. | Eliminado. |
+| 33 | **Property sin setter en `EmbeddingsFalsos`** | `dimensiones` era property en la clase base y se asignaba en el constructor de la subclase. | Se uso una constante de clase `_DIMENSIONES`. |
+| 34 | **Fragmentos muy cortos se colaban** | El fallback para documentos sin secciones no aplicaba el minimo de 40 caracteres, y anulaba el filtro. | El minimo se aplica tambien en el fallback. |
+
+El problema 30 es el mas serio del proyecto hasta ahora. Un `assert` de
+prueba revelo que el corpus real tenia 7 documentos en vez de 6: habia un
+`doc-bloq` de una prueba. Las rutas no configurables hacian que los tests
+escribieran sobre los datos de produccion.
+
+### 5.5 Decisiones de diseno
+
+1. **La verificacion se hace solo sobre los fragmentos recuperados.** Si un
+   dato esta en el documento pero no se recupero, el agente no podia
+   usarlo y no debe aparentar que si. Por eso `a_contexto()` expone solo
+   los fragmentos, no el documento entero.
+
+2. **El indice se reconstruye cuando cambia el corpus**, con la misma
+   huella que CAG. Es la garantia de que los dos servicios trabajar sobre
+   lo mismo.
+
+3. **Los fragmentos se guardan aparte en JSON.** Chroma no devuelve todos
+   los fragmentos de una vez, y depender del proveedor vectorial para
+   auditar que se indexeo seria frágil.
+
+4. **Cortar por secciones, no por cantidad de caracteres.** Un fragmento
+   que cubre "Costo" entero es mas util que uno que corta a mitad de la
+   lista de montos.
+
+5. **En las pruebas se usan embeddings falsos**, deterministas. La calidad
+   semantica de las embeddings reales se mide en `scripts/probar_rag.py`,
+   no en la suite: cargaria 400 MB y tardaria 30 s por ejecucion.
+
+### 5.6 Costo propio de RAG
+
+RAG tiene un costo grande que CAG no tiene: **cargar el modelo de
+embeddings tarda 30-67 segundos en frio**. Ocurre una sola vez por proceso,
+pero es la razon por la que el experimento tiene que separar ejecuciones
+frias de calientes y no promediar todo junto.
+
+### 5.7 Archivos creados
+
+```
+app/services/rag.py               Fragmentado, embeddings, indice, recuperacion
+scripts/probar_rag.py             Prueba de RAG por consola
+tests/test_rag.py                 36 pruebas de RAG
+```
+
+Ademas se modificaron `app/core/config.py`, `app/repositories/
+document_repository.py`, `app/services/cag.py` y `scripts/fetch_sources.py`
+por los problemas 28, 30 y 31.
+
+### 5.8 Como probarlo desde la consola
+
+```powershell
+# Indexar y recuperar, sin llamar al modelo
+python scripts\probar_rag.py
+
+# Ademas consultar al modelo real
+python scripts\probar_rag.py --consultas -p "Cuanto cuesta la copia certificada?"
+```
+
+### 5.9 Que falta
+
+- [ ] Integrar CAG y RAG en el agente, para que `/chat?strategy=cag|rag`
+      elija entre ambos con el mismo corpus.
+- [ ] API y pruebas de endpoints (Fase 6).
+
+---
+
+## Fase 6 - API FastAPI y pruebas de endpoints
+
 **Estado:** no iniciada.

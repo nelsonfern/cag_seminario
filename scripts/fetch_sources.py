@@ -161,6 +161,15 @@ def main() -> int:
     parser.add_argument("--listar", action="store_true", help="Muestra las fuentes y sale")
     parser.add_argument("--solo", nargs="*", help="Tramites a incluir")
     parser.add_argument("--forzar", action="store_true", help="Redescarga aunque exista")
+    parser.add_argument(
+        "--limpiar",
+        action="store_true",
+        help=(
+            "Empieza el corpus desde cero. Sin esto, quitar un archivo de "
+            "data/raw/ no lo saca del corpus, que queda desincronizado de "
+            "las fuentes."
+        ),
+    )
     args = parser.parse_args()
 
     settings = get_settings()
@@ -181,6 +190,12 @@ def main() -> int:
 
     cache_robots: dict[str, RobotFileParser] = {}
     repositorio = DocumentoRepository(settings.processed_dir)
+
+    if args.limpiar:
+        # Quitar un archivo de data/raw/ no lo saca del corpus por si solo:
+        # hay que reconstruirlo para que no queden documentos fantasma.
+        borrados = repositorio.limpiar()
+        print(f"[LIMPIEZA] corpus reiniciado (habia {borrados} documentos)")
 
     descargados = 0
     bloqueados = 0

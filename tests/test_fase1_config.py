@@ -7,6 +7,7 @@ y que ninguna credencial puede filtrarse ni por configuracion ni por logs.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -231,6 +232,33 @@ class TestConfiguracion:
         assert settings_de_prueba.resolve_path(settings_de_prueba.sqlite_path).parent.exists()
         assert settings_de_prueba.raw_dir.exists()
         assert settings_de_prueba.processed_dir.exists()
+
+    def test_las_rutas_son_configurables(self, tmp_path: Path) -> None:
+        """Regresion: eran propiedades fijas que ignoraban el valor dado.
+
+        `Settings(processed_dir=...)` se aceptaba y se descartaba en
+        silencio, de modo que las pruebas escribian sobre el corpus real.
+        """
+        s = Settings(
+            _env_file=None,
+            data_path=tmp_path,
+            raw_path=tmp_path / "raw",
+            processed_path=tmp_path / "proc",
+            results_path=tmp_path / "res",
+        )
+
+        assert s.data_dir == tmp_path
+        assert s.raw_dir == tmp_path / "raw"
+        assert s.processed_dir == tmp_path / "proc"
+        assert s.results_dir == tmp_path / "res"
+
+    def test_las_rutas_se_resuelven_contra_el_proyecto(self) -> None:
+        """Una ruta relativa debe apuntar al proyecto, no al directorio actual."""
+        s = Settings(_env_file=None)
+
+        assert s.processed_dir.is_absolute()
+        assert s.processed_dir.name == "processed"
+        assert s.processed_dir.parent.name == "data"
 
 
 class TestRedaccionDeCredenciales:

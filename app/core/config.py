@@ -35,6 +35,17 @@ class Settings(BaseSettings):
     app_name: str = "TramitaIA"
     log_level: str = "INFO"
     sqlite_path: Path = Path("data/tramitaia.db")
+
+    # --- Rutas del proyecto ---
+    # Campos configurables desde el entorno. Antes `data_dir`, `raw_dir`,
+    # `processed_dir` y `results_dir` eran propiedades que devolvian
+    # siempre la ruta fija del proyecto, de modo que pasarles un valor al
+    # constructor se ignoraba **en silencio**: las pruebas escribian sobre
+    # el corpus real y el `.env` no podia redirigir nada.
+    data_path: Path = Path("data")
+    raw_path: Path = Path("data/raw")
+    processed_path: Path = Path("data/processed")
+    results_path: Path = Path("results")
     # `NoDecode` desactiva el parseo automatico a JSON que pydantic-settings
     # aplica a los campos complejos. Sin esto, una lista separada por comas en
     # el `.env` falla antes de que corra el validador que la divide.
@@ -236,23 +247,24 @@ class Settings(BaseSettings):
 
     @property
     def data_dir(self) -> Path:
-        return PROJECT_ROOT / "data"
+        """Directorio raiz de datos, resuelto contra el proyecto."""
+        return self.resolve_path(self.data_path)
 
     @property
     def raw_dir(self) -> Path:
-        return PROJECT_ROOT / "data" / "raw"
+        return self.resolve_path(self.raw_path)
 
     @property
     def processed_dir(self) -> Path:
-        return PROJECT_ROOT / "data" / "processed"
+        return self.resolve_path(self.processed_path)
 
     @property
     def results_dir(self) -> Path:
-        return PROJECT_ROOT / "results"
+        return self.resolve_path(self.results_path)
 
     @property
     def corpus_manifest_path(self) -> Path:
-        return PROJECT_ROOT / "data" / "manifest.json"
+        return self.data_dir / "manifest.json"
 
     def resolve_path(self, path: Path) -> Path:
         """Convierte una ruta relativa a absoluta respecto del proyecto."""
