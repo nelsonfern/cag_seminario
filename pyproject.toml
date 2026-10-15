@@ -58,6 +58,12 @@ select = [
 ]
 ignore = [
     "E501",  # el formateador ya resuelve el largo de linea
+    # El pipeline de ingesta existe justamente para detectar y unificar
+    # comillas tipograficas, guiones y espacios duros. Marcar esos
+    # caracteres como "ambiguos" seria senalar el problema que se corrige.
+    "RUF001",
+    "RUF002",
+    "RUF003",
 ]
 
 [tool.ruff.lint.per-file-ignores]
