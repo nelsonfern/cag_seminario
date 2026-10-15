@@ -1400,3 +1400,169 @@ la referencia es correcta. Un evaluador mal escrito produce conclusions que no e
 
 1. **Leer el informe del experimento** y escribir la guia de exposicion.
 2. **La guia de exposicion**: que mostrar en vivo y que decir.
+
+## 8.7 El experimento: 23 de 50 preguntas
+
+La corrida se detuvo en 23. No por un fallo del sistema sino por el
+proveedor: el plan gratuito da 8.000 tokens por minuto, cada consulta de
+CAG gasta 3.951, y a mitad de la corrida la API respondio
+
+```
+429 Too Many Requests
+Reintento 1/2; esperando 862.0s por limite del proveedor
+```
+
+Catorce minutos de espera. Con ese ritmo, las 27 preguntas restantes
+eran unas seis horas.
+
+Se decidio parar y usar las 23. **El dataset sigue con las 50
+preguntas, verificadas una por una contra las fuentes.** Lo que quedo sin
+ejecutar es la corrida, no el trabajo previo.
+
+### Resultados
+
+| | Acierto | Latencia p50 | Latencia p90 | Tokens mediana |
+|---|---|---|---|---|
+| **CAG** | **21/23 — 91,3%** | 1.547 ms | 2.124 ms | 3.951 |
+| **RAG** | 13/23 — 56,5% | 1.406 ms | 1.922 ms | 1.493 |
+
+Por categoria:
+
+| Categoria | CAG | RAG |
+|---|---|---|
+| Requisitos | 8/10 | 6/10 |
+| Procedimiento | 10/10 | 7/10 |
+| Multi seccion | **3/3** | **0/3** |
+
+Preguntas donde solo CAG acertó: M01, M02, M03, P01, P03, P08, R01,
+R02, R06, R09.
+
+Preguntas donde **solo RAG acertó**: R05, R10. El resultado no es de una
+sola cara, y eso hay que decirlo.
+
+### El tipo de fallo es distinto en cada una
+
+| | Fallos |
+|---|---|
+| CAG | 2 respuestas incompletas |
+| RAG | 3 abstenciones indebidas, 7 respuestas incompletas |
+
+Las 3 abstenciones indebidas de RAG son el phenomenon central: se callo
+cuando la respuesta existia. Eso no es prudencia, es una falla de
+cobertura.
+
+### Donde se abre la diferencia: multi seccion
+
+RAG no acerta **ninguna** de las tres preguntas de multi seccion. Son las
+que exigen combinar dos secciones distintas, y el recuperador no trae
+las dos. Es coherente con el mecanismo de la demo: si el fragmento
+correcto cae fuera del corte de cinco, el agente se abstiene.
+
+### La latencia no incluye la espera del proveedor
+
+Una de las 23 consultas de CAG tardo **891 segundos**. No es CAG: es la
+espera por el cupo del plan gratuito. Se excluyo de las cifras de
+latencia y se conto aparte.
+
+Incluirla daria un percentil 90 de 2124 ms con CAG como una excepcion
+absurda. Y dejarla sin marcar seria peor: alguien leeria un maximo de 891
+segundos como si fuera una propiedad de CAG.
+
+Por eso el informe tiene un campo `espera_del_proveedor` y la guia dice
+que queda fuera.
+
+### Lo que esta corrida no demuestra
+
+**No dice nada sobre la honestidad del sistema.** Las diez preguntas de
+fuera de corpus son las que miden si el agente se abstiene en vez de
+inventar, y **no se ejecutaron**. Sin ellas no hay metrica de
+abstencion, que es la mas importante del proyecto. Los veredictos del
+informe muestran `abstenciones_correctas: 0` en las dos estrategias,
+pero eso no significa que el sistema no se abstenga: significa que no se
+le pregunto.
+
+Tampoco se ejecutaron las diez preguntas ambiguas.
+
+### Cambios en los scripts para que esto se pueda reportar
+
+El runner solo guardaba el informe **al terminar**. Con esperas de 862
+segundos, una interrupcion perderia todo. Ahora escribe
+`results/informe-parcial.json` despues de cada consulta.
+
+Y como esta corrida igual se corto, se escribio
+`scripts/informe_desde_log.py`, que reconstruye el informe desde el log
+de consola.
+
+---
+
+## 8.8 Dos bugs del reconstructions, no del sistema
+
+Al reconstruir el informe desde el log aparecieron dos artefactos que
+habria que presentar como hallazgos si no se revisaran.
+
+### El log se cuela en el motivo del fallo
+
+El runner escribe su progreso en stdout y el logging va a stderr, pero al
+redirigir los dos al mismo archivo **las lineas se intercalan a mitad de
+linea**. El campo de motivo terminaba con un `HTTP/1.1 200 OK` colado, y
+las estadisticas de tipo de fallo salian todas mal: 21 casos de "sin
+respaldo verificable" que en realidad eran aciertos.
+
+Se descarta todo lo que viene despues del primer `|`.
+
+### Una espera del proveedor se disfrazaba de latencia extrema
+
+El maximo de 891.157 ms de CAG no era una medida de CAG. Sin marcarlo,
+alguien podria leer "CAG tarda 15 minutos" y llevarselo al seminario.
+
+Ahora las consultas de mas de 60 segundos se cuentan aparte, en
+`espera_del_proveedor`, y quedan fuera de los percentiles.
+
+**Los dos errores son del instrumento de medicion, no del sistema
+medido.** Que el informe necesitara dos correcciones antes de ser
+presentable es exactamente el motivo por el que la bitacora existe.
+
+---
+
+## 8.9 El resultado en una frase
+
+> Con este corpus, CAG acerta el 91% y RAG el 56%, con la misma latencia.
+> La diferencia no esta en la velocidad ni en el costo: esta en que RAG
+> puede dejar de responder una consulta cuya respuesta esta en las
+> fuentes, y ese fallo no deja rastro.
+
+Y el limite, que va con la frase: **23 de 50 preguntas, y ninguna de las
+diez que miden honestidad.**
+
+------
+
+## Estado del proyecto
+
+| Fase | Estado |
+|------|--------|
+| 1 - Arquitectura | Completada |
+| 2 - Ingesta | Completada |
+| 3 - Proveedor LLM y agente | Completada |
+| 4 - CAG | Completada |
+| 5 - RAG | Completada |
+| 6 - API | Completada |
+| 7 - Interfaz web | Completada y corregida |
+| 8 - Dataset, evaluador y experimento | **Completada con 23 de 50 preguntas** |
+| 9 - Documentacion final | Completada |
+
+**317 pruebas pasan**, lint limpio.
+
+### El resultado del experimento
+
+CAG 21/23 (91,3%) contra RAG 13/23 (56,5%), con la misma latencia y
+RAG usando menos de la mitad de los tokens. Donde mas se abre la
+diferencia es en multi seccion: RAG no acierta ninguna de las tres.
+
+### Lo que queda pendiente
+
+1. **Correr las 10 preguntas de fuera de corpus.** Son las que miden si
+   el agente se abstiene en vez de inventar. Sin ellas no hay metrica de
+   honestidad, que es la mas importante del proyecto. Necesita un plan
+   pago del proveedor, o mas pausa entre llamadas.
+2. **Las 10 preguntas ambiguas.**
+3. Repetir la corrida con mas consultas para acotar el margen de error.

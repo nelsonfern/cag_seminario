@@ -14,18 +14,35 @@ Todo lo de abajo sale de mediciones de este repositorio, no de opinion.
 La pregunta era "si RAG es mas rapido y gasta menos tokens". La primera
 mitad es falsa y la segunda es cierta.
 
-**RAG no es mas rapido.** Con los servicios calientes:
+**RAG no es mas rapido.** En la corrida de 23 preguntas, con la cache del
+proveedor funcionando:
 
-| | Latencia | Tokens de entrada | Tokens cacheados |
-|---|---|---|---|
-| CAG | 1.599 ms | 3.952 | 3.840 (97,2%) |
-| RAG | 1.624 ms | 1.446 | 512 (35,4%) |
+| | Acierto | Latencia p50 | Latencia p90 | Tokens mediana |
+|---|---|---|---|---|
+| **CAG** | **21/23 - 91,3%** | 1.547 ms | 2.124 ms | 3.951 |
+| **RAG** | 13/23 - 56,5% | 1.406 ms | 1.922 ms | 1.493 |
 
-Empate, dentro del ruido. La medicion inicial de 30.706 ms para RAG era
-falsa: era la carga del modelo de embeddings, no recuperacion.
+Empate en latencia: 141 milisegundos de diferencia no significan nada
+frente a la dispersion. RAG si gasta menos tokens, 1.493 contra 3.951, un
+62% menos.
 
-**RAG si gasta menos tokens**: 1.446 contra 3.952, un 63% menos. Eso es
-real y no hay forma de rodearlo.
+La medicion inicial de 30.706 ms para RAG era falsa: era la carga del
+modelo de embeddings, no recuperacion.
+
+Y el resultado no es de una sola cara: **RAG acerto dos consultas donde
+CAG fallo**, R05 y R10.
+
+Por categoria:
+
+| Categoria | CAG | RAG |
+|---|---|---|
+| Requisitos | 8/10 | 6/10 |
+| Procedimiento | 10/10 | 7/10 |
+| Multi seccion | **3/3** | **0/3** |
+
+Multi seccion es donde la diferencia se abre del todo: RAG no acierta
+ninguna de las tres. Son preguntas que exigen combinar dos secciones
+distintas, y el recuperador no trae las dos.
 
 ## 2. Y el costo no decide nada aca
 
@@ -180,13 +197,23 @@ variable es la que hay que mirar antes de decidir.
 
 ## 6. Lo que este documento no demuestra
 
-- **No demuestra que CAG sea mas rapido.** Los datos dan empate.
+- **No demuestra que CAG sea mas rapido.** Los datos dan empate:
+  1.547 ms contra 1.406 ms.
 - **No demuestra que CAG sea mas barato.** RAG es mas barato incluso con
-  la cache funcionando.
+  la cache funcionando, con 62% menos tokens.
 - **No demuestra que CAG sea mejor en general.** Con 9 documentos, CAG no
-  funciona.
-- **No usa la corrida de 50 preguntas.** Son observaciones de
-  diagnostico sobre consultas individuales, no resultados del experimento.
+  funciona. Y en esta corrida RAG acerto 2 de 23 donde CAG fallo.
+- **No demuestra nada sobre la honestidad del sistema.** Las diez
+  preguntas de fuera de corpus, las que miden si el agente se abstiene en
+  vez de inventar, **no se ejecutaron**. Es la limitacion mas grave de
+  toda la corrida.
+- **23 preguntas no son una muestra solida.** La diferencia es grande,
+  pero el margen de error con 23 casos es amplio.
+- **No cubre preguntas ambiguas.** Otras diez sin ejecutar.
+- **La comparacion favorece a CAG por construccion.** CAG manda los
+  3.730 tokens del corpus y RAG 1.493. Es la definicion de cada tecnica,
+  no un sesgo del experimento, pero conviene decirlo en voz alta.
 
-La corrida completa puede—invertirse, y habria que decirlo asi. Una
-consulta no es una muestra.
+La corrida completa puede—invertirse, y habria que decirlo asi. Con 23 de
+50 preguntas, y **ninguna** de las diez que miden honestidad, el resultado
+sostiene una tesis sobre **cobertura** y no sobre **seguridad**.

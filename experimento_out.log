@@ -197,3 +197,6 @@ El limite del proveedor es de 8.000 tokens por minuto; esto va a tardar.
 2026-10-15 18:55:04 | INFO     | tramitaia.rag | recuperacion | fragmentos=5/5 | 47.7 ms (emb 36.7 + busq 2.2)
 2026-10-15 18:55:05 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
 2026-10-15 18:55:05 | INFO     | tramitaia.agent | respuesta | estrategia=rag grounded=True citadas=4 lat=1453ms in=1401
+  [23/50] M03  RAG  MAL    1453ms in=1401 respuesta incompleta: falta gratuito, 1.100
+2026-10-15 18:55:23 | INFO     | httpx | HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-10-15 18:55:23 | WARNING  | tramitaia.llm | Reintento 1/2; esperando 734.0s por limite del proveedor
