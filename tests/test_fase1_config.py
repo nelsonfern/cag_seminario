@@ -109,10 +109,26 @@ class TestConfiguracion:
         assert s.app_name != "NoDeberiaAplicarse"
 
     def test_lista_desde_csv(self) -> None:
-        """Las variables de entorno llegan como string separado por comas."""
-        s = Settings(_env_file=None, corpus_tramites="partidas,autenticacion")
+        """Las variables de entorno llegan como string separado por comas.
+
+        Regresion: pydantic-settings intenta parsear a JSON los campos
+        complejos ANTES de correr los validadores, asi que sin `NoDecode`
+        un valor como "http://a,http://b" reventaba al leer el `.env`.
+        """
+        s = Settings(
+            _env_file=None,
+            corpus_tramites="partidas,autenticacion",
+            cors_origins="http://localhost:8000,http://127.0.0.1:8000",
+        )
 
         assert s.corpus_tramites == ["partidas", "autenticacion"]
+        assert s.cors_origins == ["http://localhost:8000", "http://127.0.0.1:8000"]
+
+    def test_lista_se_puede_seguir_pasando_como_lista(self) -> None:
+        """El uso interno (default_factory) no debe romperse."""
+        s = Settings(_env_file=None, corpus_tramites=["a", "b"])
+
+        assert s.corpus_tramites == ["a", "b"]
 
     def test_solapamiento_mayor_que_fragmento_es_error(self) -> None:
         with pytest.raises(ValueError, match="RAG_CHUNK_OVERLAP"):

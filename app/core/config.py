@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # --- Ruta raiz del proyecto (dos niveles arriba de app/core) ---
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -35,7 +35,10 @@ class Settings(BaseSettings):
     app_name: str = "TramitaIA"
     log_level: str = "INFO"
     sqlite_path: Path = Path("data/tramitaia.db")
-    cors_origins: list[str] = Field(
+    # `NoDecode` desactiva el parseo automatico a JSON que pydantic-settings
+    # aplica a los campos complejos. Sin esto, una lista separada por comas en
+    # el `.env` falla antes de que corra el validador que la divide.
+    cors_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:8000", "http://127.0.0.1:8000"]
     )
 
@@ -105,7 +108,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # Ingesta documental
     # -------------------------------------------------------------------------
-    corpus_tramites: list[str] = Field(default_factory=lambda: ["partidas"])
+    corpus_tramites: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["partidas"])
     fetch_respect_robots: bool = True
     fetch_user_agent: str = "TramitaIA/0.1 (proyecto academico)"
     fetch_delay_s: float = 1.0
