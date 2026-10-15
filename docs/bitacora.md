@@ -238,7 +238,7 @@ requirements.txt          Dependencias con justificacion de cada una
 .gitignore                Excluye .env, corpus descargado y resultados
 .env.example              Configuracion documentada, sin credenciales reales
 tests/conftest.py         Fixtures; fija el entorno a nivel de modulo
-tests/test_fase1_config.py  23 pruebas de configuracion, /health y redaccion
+tests/test_fase1_config.py  35 pruebas de configuracion, /health y redaccion
 
 app/main.py               Aplicacion FastAPI con lifespan y CORS
 app/core/config.py        Settings con validacion de coherencia
@@ -256,7 +256,7 @@ para revision humana. El script **no asigna puntaje automatico**: un
 puntaje heuristico sobre cinco casos daria una precision que el numero no
 sostiene.
 
-### 1.4 Decisiones de diseno que conviene no revertir
+### 1.5 Decisiones de diseno que conviene no revertir
 
 1. **`EstadoVigencia.DESCONOCIDA` es el valor por defecto**, no `VIGENTE`.
    Codifica directamente la regla "no inferir vigencia por estar publicado".
@@ -270,7 +270,7 @@ sostiene.
 5. **El filtro de log actua sobre `exc_info`**, no solo sobre el mensaje.
    Es la via por la que una cabecera `Authorization` se filtra sin querer.
 
-### 1.5 Revision de robots.txt (requisito previo a la Fase 2)
+### 1.6 Revision de robots.txt (requisito previo a la Fase 2)
 
 El enunciado pide revisar las condiciones de acceso **antes** de automatizar
 descargas. Resultado para las siete fuentes del prompt:
@@ -300,11 +300,139 @@ tramites los enlace.
 - [x] Decidir proveedor definitivo de LLM segun el benchmark. **Hecho: API.**
 - [x] Verificar que el embedding multilingue se descarga y funciona. **Hecho: OK.**
 - [x] `git add` de `docs/` y commit de la estructura. **Hecho: `651b20a`.**
-- [ ] Obtener una clave de API y cargar `.env` (tarea del desarrollador).
-- [ ] Decidir el recorte concreto del corpus en la Fase 2.
+- [x] Obtener una clave de API y cargar `.env`. **Hecho: Groq, validada.**
+- [x] Decidir el recorte concreto del corpus. **Hecho: Registro Civil, 6 paginas.**
 
 ---
 
-## Fase 2 - Ingesta documental
+## Fase 2 - Ingesta documental y manifiesto de fuentes
 
-**Estado:** no iniciada.
+**Estado:** completada y verificada. Commit `9beee59`. 88 pruebas pasan
+(35 de Fase 1 + 53 nuevas).
+
+### 2.1 Corpus obtenido
+
+Descarga real respetando `robots.txt`, con `data/raw/` conservando el
+HTML crudo para que el pipeline sea auditable.
+
+| Tramite | Documento | Fecha declarada | Vigencia |
+|---------|-----------|------------------|----------|
+| partidas | Solicitud de Partidas | 2025-10-20 | vigente |
+| nacimientos | Inscripcion de nacimientos | 2025-10-20 | vigente |
+| matrimonios | Inscripcion de matrimonios | 2025-10-20 | vigente |
+| defunciones | Inscripcion de defunciones | 2025-10-20 | vigente |
+| rectificacion_partidas | Rectificacion de partidas | 2025-10-20 | vigente |
+| guia_tramites | Guia de Tramites | 2025-01-20 | **parcial** |
+| partidas | `argentina.gob.ar/tramitar` | - | **no accesible** |
+
+Totales: 6 documentos, ~10.320 caracteres, ~2.580 tokens estimados, sin
+duplicados por contenido, todos con URL de origen.
+
+La guia quedo `parcial` y no `vigente` porque su fecha de actualizacion
+supera el ano. Es la regla conservadora funcionando: no se afirma que un
+documento siga vigente sin examinar la normativa que lo respalda.
+
+### 2.2 Hallazgo de contenido: el caso de vigencia
+
+La pagina de partidas declara **"Ultima actualizacion: 20/10/2025"** pero
+sus costos salen de la **Ley Impositiva 2024 (Ley 10.929, art. 79)**:
+
+- Copia de acta certificada: **$1.100**
+- Copia de acta legalizada: **$1.500**
+- Copia para tramite de identificacion y primera copia de matrimonio: **Sin cargo**
+- Nota de la fuente: *"La Municipalidad de La Rioja podra establecer su
+  propia tasa por actas inscriptas en el Registro de la Ciudad de La Rioja."*
+
+Tres consecuencias, y no son teoricas:
+
+1. La pagina se actualizo hace un ano, pero los precios son de una ley de
+   hace dos. **La fecha de actualizacion de la pagina no dice nada sobre la
+   vigencia del precio.** Es un caso real, no inventado, de la metrica de
+   vigencia que pide el enunciado.
+2. La propia fuente admite una **tasa municipal** distinta de la
+   provincial. Es el caso de **contradiccion entre documentos** que tambien
+   pide medir.
+3. El agente deberia informar el arancel con la salvedad de que la
+   Municipalidad puede fijar otro, en vez de dar un numero unico.
+
+Se conserva tal cual, sin "actualizar" el precio ni descartar la nota.
+
+### 2.3 Decisiones de diseno
+
+1. **El identificador sale de la procedencia, no del contenido.** Si
+   dependiera del contenido, cada actualizacion de la fuente invalidaria
+   las citas ya emitidas. El `hash_contenido` es lo que detecta el cambio,
+   y se guarda en un `historial_ingesta` auditable. Es lo que permite decir
+   "este documento cambio" en lugar de aparecer algo nuevo sin relacion.
+
+2. **La vigencia tiene tres estados, no dos.** `DESCONOCIDA` (sin fecha),
+   `PARCIAL` (mas de un ano), `VIGENTE`. Colapsar `DESCONOCIDA` en
+   `VIGENTE` habria sido el error facil: el enunciado prohibe inferir
+   vigencia por estar publicado.
+
+3. **Un PDF escaneado falla explicitamente.** `extraer_documento` lanza
+   `IngestionError` mencionando que requiere OCR. Devolver texto vacio
+   habria metido el documento al corpus, y el agente se habria abstenido
+   por una causa que nadie registro.
+
+4. **Los metadatos se guardan limpios.** `MetadatosDocumento` usa
+   `extra="forbid"`, asi que cualquier campo auxiliar dentro del diccionario
+   de metadatos rompe la relectura del corpus. El historial vive fuera.
+
+5. **Se comprueba la firma binaria, no solo la extension.** Un PDF guardado
+   como `.html` se detecta como PDF por su cabecera `%PDF-` y se procesa
+   bien. Decidirlo por la extension daria texto vacio sin aviso.
+
+6. **Allowlist de rutas internas.** `/functions/`, `/rgformulario/`,
+   `/firebaseConfig.js` y similares nunca se descargan, aunque una pagina
+   los enlace. No son contenido publico.
+
+### 2.4 Problemas encontrados
+
+| # | Problema | Causa | Resolucion |
+|---|----------|-------|------------|
+| 9 | **JSON-LD siempre vacio** | `_extraer_html` eliminaba los `<script>` antes de llamar a `_metadatos_html`. El bloque `application/ld+json` es donde estos sitios declaran sus fechas, y ya habia sido destruido. Se manifesto como la guia con `vigencia=desconocida`. | Se leen los metadatos antes de descomponer los `<script>`. Verificado: la guia paso a `2025-01-20 / parcial`. |
+| 10 | **El corpus no se releia** | `guardar_documento` guardaba `fecha_primera_ingesta` dentro del diccionario de metadatos. Al releer, `MetadatosDocumento(**metadatos)` con `extra="forbid"` lanzaba error de validacion. | El historial paso a una clave propia de la entrada, `historial_ingesta`. |
+| 11 | **Extraccion duplicada** | `procesar_archivo` llamaba a `extraer_documento` dos veces, una directa y otra dentro de `construir_documento`, duplicando el trabajo de parseo. | Se acepta el texto ya extraido y solo se relee el archivo para el hash. |
+| 12 | **`sim/**` y caracteres ambiguos** | Ruff marco RUF001/002/003 como error, senalando justamente las comillas tipograficas y guiones que el modulo existe para normalizar. | Se desactivan esas tres reglas con un comentario que explica por que: marcar como ambiguo lo que se esta corrigiendo seria senalar el problema, no resolverlo. |
+| 13 | **Convencion de excepcion** | `ErrorExtraccion` no cumplia la convencion de Ruff de terminar en `Error`. | Renombrada a `IngestionError`. |
+
+### 2.5 Archivos creados
+
+```
+app/services/ingestion.py          Extraccion, normalizacion, hash, marcadores
+app/services/corpus.py             Identidad estable, manifiesto, duplicados
+app/repositories/
+  document_repository.py           Persistencia del corpus y su manifiesto
+scripts/fetch_sources.py           Descarga respetando robots.txt
+tests/test_ingestion.py            53 pruebas de ingesta
+data/processed/corpus.json         Corpus normalizado (generado)
+data/manifest.json                 Manifiesto de fuentes (generado)
+```
+
+### 2.6 Verificado, no supuesto
+
+- Las 6 descargas salieron de sitios oficiales reales y el corpus se puede
+  releer sin errores.
+- Los montos de la Ley Impositiva sobreviven intactos al pipeline
+  (prueba `test_los_costos_no_se_pierden`).
+- Los hashes son **identicos entre dos ejecuciones seguidas**: el pipeline
+  es determinista y reproducible.
+- `argentina.gob.ar/tramitar` quedo **registrada como no accesible** en el
+  manifiesto en lugar de descargarse o desaparecer.
+- La suite pasa en una instalacion limpia: las pruebas que necesitan el
+  corpus real hacen `skip` si no esta descargado, para no depender de red.
+
+### 2.7 Que falta
+
+- [ ] Incorporar manualmente `argentina.gob.ar/tramitar` si se la quiere en
+      el corpus. El enunciado lo contempla: archivo en `data/raw/` y URL
+      conservada en el manifiesto.
+- [ ] Ampliar el corpus con un segundo tramite, para medir como afecta el
+      crecimiento del corpus a CAG y a RAG (linea base de comparacion).
+
+---
+
+## Fase 3 - Proveedor LLM intercambiable y primera respuesta fundamentada
+
+**Estado:** en curso.
