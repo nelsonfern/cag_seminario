@@ -100,7 +100,18 @@ _CEROS_INVISIBLES = dict.fromkeys(
         0x200D,
         0x2060,
         0xFEFF,  # BOM
-    ]
+        # Los modelos de lenguaje emiten espacios "finos" (U+202F) para
+        # separar numeros de unidades: "1.100\u202fpesos". Son invisibles,
+        # rompen la salida por consola y corrompen el CSV de resultados.
+        # Se convierten en espacio normal en vez de eliminarse, para no
+        # juntar dos palabras que estaban separadas.
+        0x00A0,
+        0x2007,
+        0x2009,
+        0x202F,
+        0x3000,
+    ],
+    " ",
 )
 
 _RE_ESPACIOS = re.compile(r"[ \t\r\f\v]+")
