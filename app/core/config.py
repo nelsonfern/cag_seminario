@@ -72,6 +72,12 @@ class Settings(BaseSettings):
     llm_request_timeout_s: float = 120.0
     llm_max_retries: int = 2
 
+    # Esfuerzo de razonamiento de los modelos que lo soportan.
+    # gpt-oss solo admite low/medium/high y no se puede desactivar, asi que
+    # el campo `reasoning` de la respuesta se separa y se descarta.
+    # Un valor vacio significa "no enviar el parametro".
+    llm_reasoning_effort: str = "low"
+
     # --- Prompt caching del proveedor ---
     # Solo se activa si el proveedor lo expone de forma documentada.
     # Si el proveedor no reporta metricas de cache, se registra como no disponible.
@@ -135,6 +141,18 @@ class Settings(BaseSettings):
         if not 0.0 <= value <= 2.0:
             raise ValueError(f"LLM_TEMPERATURE debe estar entre 0.0 y 2.0, recibio {value}")
         return value
+
+    @field_validator("llm_reasoning_effort")
+    @classmethod
+    def _validate_reasoning_effort(cls, value: str) -> str:
+        permitidos = {"", "none", "low", "medium", "high"}
+        normalizado = value.strip().lower()
+        if normalizado not in permitidos:
+            raise ValueError(
+                f"LLM_REASONING_EFFORT invalido: {value!r}. "
+                f"Valores permitidos: {sorted(permitidos)}"
+            )
+        return normalizado
 
     @field_validator("rag_chunk_overlap")
     @classmethod

@@ -189,6 +189,26 @@ class TestConfiguracion:
         with pytest.raises(ValueError, match="LLM_TEMPERATURE"):
             Settings(_env_file=None, llm_temperature=5.0)
 
+    def test_esfuerzo_de_razonamiento_invalido_es_error(self) -> None:
+        with pytest.raises(ValueError, match="LLM_REASONING_EFFORT"):
+            Settings(_env_file=None, llm_reasoning_effort="maximo")
+
+    @pytest.mark.parametrize("valor", ["", "none", "low", "medium", "high"])
+    def test_esfuerzo_de_razonamiento_valido(self, valor: str) -> None:
+        assert Settings(_env_file=None, llm_reasoning_effort=valor).llm_reasoning_effort == (valor)
+
+    def test_configuracion_sin_dotenv_no_falla_al_importar(self) -> None:
+        """Importar el paquete no puede depender de que exista un .env valido.
+
+        Si fallara, no se podria ni leer /health ni correr los tests sin
+        credenciales configuradas.
+        """
+        import app.core.config as config
+
+        config_module = config
+
+        assert config_module.get_settings() is not None
+
     def test_ensure_directories_crea_lo_needed(self, settings_de_prueba: Settings) -> None:
         settings_de_prueba.ensure_directories()
 

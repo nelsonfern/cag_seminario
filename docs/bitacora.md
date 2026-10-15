@@ -140,6 +140,39 @@ Nota de diseno importante: Groq solo reporta `cached_tokens` para
 segunda arranca con la cache vacia y la medicion pierde sentido. Esto
 justifica medir por separado ejecuciones frias y calientes.
 
+#### 1.2.5 gpt-oss es un modelo de razonamiento (impacto en diseno)
+
+`gpt-oss-120b` devuelve por defecto un campo `reasoning` separado, y su
+`reasoning_effort` solo admite `low`, `medium` y `high`: **no hay forma de
+desactivar el razonamiento**. Dos consecuencias:
+
+1. Los tokens de razonamiento se cobran como tokens de salida normales.
+2. Si ese texto llegara a un sintetizador de voz, se leeria en voz alta.
+
+Decision: usar `gpt-oss-120b` con `reasoning_effort=low`, separar el campo
+`reasoning` del `content` y descartarlo antes de responder. Se descarta el
+unico modelo gratuito (`qwen/qwen3.8-27b`, que si admite
+`reasoning_effort=none`) porque **no reporta `cached_tokens`**, que es la
+metrica que el enunciado pide medir. Es un canje consciente: razonamiento
+a cambio de la metrica de cache.
+
+#### 1.2.6 Salida en prosa, pensada para ser leida
+
+Decision de diseno tomada ahora, cuando es gratis: **el agente responde en
+prosa simple, sin tablas markdown ni URLs dentro del texto**, y las fuentes
+se devuelven aparte como lista estructurada.
+
+El motivo es que la salida del agente tiene que serPresentable en pantalla,
+exportable a CSV para el dataset de evaluacion y, si se quiere, leible por
+un sintetizador de voz. Escribirla asi desde el principio evita un
+refactor caro mas adelante.
+
+Nota sobre TTS: no forma parte del MVP. El enunciado no lo pide. Si se
+suma como extra, la via gratuita es `speechSynthesis` del navegador, que ya
+esta disponible, habla espanol y no requiere clave de API ni dependencias
+nuevas. Elegir el modelo de texto no condiciona esta decision: son servicios
+independientes.
+
 ### 1.3 Archivos creados
 
 ```
